@@ -76,32 +76,33 @@ def get_latest_free_model(api_key: str) -> str:
     candidates = []
 
     for model in models:
-        model_name = model.get("name", "")  # e.g. "models/gemini-3.6-flash"
+        # name is like "models/gemini-2.5-flash"
+        model_name = model.get("name", "")
         supported_methods = model.get("supportedGenerationMethods", [])
-        base_model_id = model.get("baseModelId", "")
 
-        # Filter for models with generateContent and stable flash variants
+        # Extract the model ID (remove "models/" prefix)
+        model_id = model_name.split("/")[-1] if model_name else ""
+        
+        if not model_id:
+            continue
+
+        # Filter for models with generateContent support
         if "generateContent" not in supported_methods:
             continue
 
-        # Include stable flash models; exclude previews, lite, audio, and tts
-        if not any(
-            part in base_model_id.lower()
-            for part in ["flash"]
-        ):
-            continue
+        # Exclude previews, lite, audio, tts, and live variants
         if any(
-            part in base_model_id.lower()
+            part in model_id.lower()
             for part in ["preview", "lite", "audio", "tts", "live"]
         ):
             continue
 
-        candidates.append(base_model_id)
+        candidates.append(model_id)
 
     if not candidates:
         raise RuntimeError(
             "No free-tier Gemini models with generateContent support found. "
-            "Available models from API: " + json.dumps([m.get("baseModelId") for m in models])
+            "Available models from API: " + json.dumps([m.get("name", "").split("/")[-1] for m in models])
         )
 
     # Sort by version number (extract major.minor and compare)
