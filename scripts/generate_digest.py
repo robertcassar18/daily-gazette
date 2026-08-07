@@ -16,6 +16,7 @@ TIMEZONE = ZoneInfo("Europe/Malta")
 
 ROOT = Path(__file__).resolve().parent.parent
 FORCE_RUN = os.environ.get("FORCE_RUN", "0") == "1"
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 def now_in_malta() -> datetime:
     return datetime.now(TIMEZONE)
@@ -43,80 +44,37 @@ def should_run() -> bool:
 
 def get_latest_free_model(api_key: str) -> str:
     """
-    Fetch available Gemini models from the API and return the latest
-    free-tier model that supports generateContent.
+    Legacy helper retained for compatibility.
 
-    Free-tier models are those with "generateContent" in
-    supportedGenerationMethods. We filter for stable flash models
-    (excluding previews, lite variants, and audio models) and return
-    the one with the highest version number.
+    The workflow now uses the configured model directly to avoid an extra
+    Gemini API request that can consume free-tier quota before generation.
     """
-    models_url = "https://generativelanguage.googleapis.com/v1beta/models"
-    query = urllib.parse.urlencode({"key": api_key})
-    request = urllib.request.Request(
-        f"{models_url}?{query}",
-        headers={"Content-Type": "application/json"},
-        method="GET",
-    )
+    return DEFAULT_MODEL
 
-    try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            response_data = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        error_body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(
-            f"Failed to fetch Gemini models (HTTP {exc.code}): {error_body}"
-        ) from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(
-            f"Could not connect to Gemini API to fetch models: {exc}"
-        ) from exc
 
-    models = response_data.get("models", [])
-    candidates = []
+def resolve_model(api_key: str, preferred_model: str | None = None) -> str:
+    """Resolve the Gemini model to use for generation."""
+    configured_model = (preferred_model or os.environ.get("GEMINI_MODEL", "")).strip()
+    if configured_model:
+        return configured_model
 
-    for model in models:
-        # name is like "models/gemini-2.5-flash"
-        model_name = model.get("name", "")
-        supported_methods = model.get("supportedGenerationMethods", [])
+    return DEFAULT_MODEL
 
-        # Extract the model ID (remove "models/" prefix)
-        model_id = model_name.split("/")[-1] if model_name else ""
-        
-        if not model_id:
-            continue
 
-        # Filter for models with generateContent support
-        if "generateContent" not in supported_methods:
-            continue
+def format_gemini_error(status_code: int, error_body: str) -> str:
+    """Turn Gemini API failures into clearer quota guidance."""
+    body = error_body or ""
+    lower_body = body.lower()
 
-        # Exclude previews, lite, audio, tts, and live variants
-        if any(
-            part in model_id.lower()
-            for part in ["preview", "lite", "audio", "tts", "live"]
-        ):
-            continue
-
-        candidates.append(model_id)
-
-    if not candidates:
-        raise RuntimeError(
-            "No free-tier Gemini models with generateContent support found. "
-            "Available models from API: " + json.dumps([m.get("name", "").split("/")[-1] for m in models])
+    if status_code == 429 or "quota" in lower_body or "exhausted" in lower_body or "rate limit" in lower_body:
+        return (
+            f"Gemini API quota exceeded (HTTP {status_code}). "
+            "This usually means the free-tier quota for your API key has been exhausted "
+            "or the account is being rate-limited. Wait for the quota window to reset, "
+            "use a different key, or reduce the number of workflow runs."
         )
 
-    # Sort by version number (extract major.minor and compare)
-    def extract_version(model_name: str) -> tuple:
-        # e.g., "gemini-3.6-flash" -> (3, 6)
-        match = re.search(r"gemini-(\d+)\.(\d+)", model_name)
-        if match:
-            return (int(match.group(1)), int(match.group(2)))
-        return (0, 0)
-
-    candidates.sort(key=extract_version, reverse=True)
-    latest_model = candidates[0]
-
-    return latest_model
+    return f"Gemini API returned HTTP {status_code}: {body}"
 
 def build_prompt(date_string: str) -> str:
     return f"""
@@ -227,9 +185,7 @@ def call_gemini(prompt: str, model: str) -> str:
             response_data = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         error_body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(
-            f"Gemini API returned HTTP {exc.code}: {error_body}"
-        ) from exc
+        raise RuntimeError(format_gemini_error(exc.code, error_body)) from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Could not connect to Gemini API: {exc}") from exc
 
@@ -518,8 +474,7 @@ def main():
             "GEMINI_API_KEY is not set. Add it as a GitHub Actions secret."
         )
 
-    print("Detecting latest available free-tier Gemini model...")
-    model = get_latest_free_model(api_key)
+    model = resolve_model(api_key)
     print(f"Using model: {model}")
 
     current = now_in_malta()
