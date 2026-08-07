@@ -27,3 +27,9 @@ class GenerateDigestTests:
         assert "429" in message
         assert "quota" in lowered
         assert "free tier" in lowered
+
+    def test_unsupported_model_error_is_detected(self):
+        assert module.is_unsupported_model_error(
+            400,
+            '{"error":{"message":"The selected model does not allow generating docs."}}',
+        )

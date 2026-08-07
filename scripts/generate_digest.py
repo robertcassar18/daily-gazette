@@ -16,7 +16,8 @@ TIMEZONE = ZoneInfo("Europe/Malta")
 
 ROOT = Path(__file__).resolve().parent.parent
 FORCE_RUN = os.environ.get("FORCE_RUN", "0") == "1"
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-2.0-flash"
+FALLBACK_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
 
 def now_in_malta() -> datetime:
     return datetime.now(TIMEZONE)
@@ -74,7 +75,29 @@ def format_gemini_error(status_code: int, error_body: str) -> str:
             "use a different key, or reduce the number of workflow runs."
         )
 
+    if status_code == 400 and (
+        "does not allow generating" in lower_body
+        or "does not support" in lower_body
+        or "unsupported model" in lower_body
+        or "not supported" in lower_body
+    ):
+        return (
+            f"Gemini model rejected the request (HTTP {status_code}). "
+            "The selected model may be unavailable for this endpoint or feature. "
+            "The script will retry with a more broadly supported model when possible."
+        )
+
     return f"Gemini API returned HTTP {status_code}: {body}"
+
+
+def is_unsupported_model_error(status_code: int, error_body: str) -> bool:
+    body = (error_body or "").lower()
+    return status_code == 400 and (
+        "does not allow generating" in body
+        or "does not support" in body
+        or "unsupported model" in body
+        or "not supported" in body
+    )
 
 def build_prompt(date_string: str) -> str:
     return f"""
@@ -143,59 +166,92 @@ def call_gemini(prompt: str, model: str) -> str:
             "GEMINI_API_KEY is not set. Add it as a GitHub Actions secret."
         )
 
-    api_url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{model}:generateContent"
-    )
+    candidates = [model]
+    for fallback_model in FALLBACK_MODELS:
+        if fallback_model not in candidates:
+            candidates.append(fallback_model)
 
-    payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [
-                    {
-                        "text": prompt,
-                    }
-                ],
-            }
-        ],
-        "tools": [
-            {
-                "google_search": {}
-            }
-        ],
-        "generationConfig": {
-            "temperature": 0.3,
-            "maxOutputTokens": 30000,
-        },
-    }
-
-    query = urllib.parse.urlencode({"key": api_key})
-    request = urllib.request.Request(
-        f"{api_url}?{query}",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-
-    try:
-        with urllib.request.urlopen(request, timeout=180) as response:
-            response_data = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        error_body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(format_gemini_error(exc.code, error_body)) from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Could not connect to Gemini API: {exc}") from exc
-
-    candidates = response_data.get("candidates", [])
-
-    if not candidates:
-        raise RuntimeError(
-            "Gemini returned no candidates:\n"
-            + json.dumps(response_data, indent=2)
+    last_error = None
+    for attempt_model in candidates:
+        api_url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{attempt_model}:generateContent"
         )
+
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "text": prompt,
+                        }
+                    ],
+                }
+            ],
+            "tools": [
+                {
+                    "google_search": {}
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.3,
+                "maxOutputTokens": 30000,
+            },
+        }
+
+        query = urllib.parse.urlencode({"key": api_key})
+        request = urllib.request.Request(
+            f"{api_url}?{query}",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(request, timeout=180) as response:
+                response_data = json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="replace")
+            last_error = (exc.code, error_body)
+            if is_unsupported_model_error(exc.code, error_body) and attempt_model != candidates[-1]:
+                print(
+                    f"Model {attempt_model} rejected the request; retrying with {candidates[candidates.index(attempt_model) + 1]}",
+                    file=sys.stderr,
+                )
+                continue
+            raise RuntimeError(format_gemini_error(exc.code, error_body)) from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"Could not connect to Gemini API: {exc}") from exc
+
+        candidates = response_data.get("candidates", [])
+
+        if not candidates:
+            raise RuntimeError(
+                "Gemini returned no candidates:\n"
+                + json.dumps(response_data, indent=2)
+            )
+
+        parts = candidates[0].get("content", {}).get("parts", [])
+        text_parts = [
+            part.get("text", "")
+            for part in parts
+            if isinstance(part, dict) and part.get("text")
+        ]
+
+        result = "\n".join(text_parts).strip()
+
+        if not result:
+            raise RuntimeError("Gemini returned an empty response.")
+
+        return result
+
+    if last_error:
+        raise RuntimeError(format_gemini_error(last_error[0], last_error[1]))
+
+    raise RuntimeError("Gemini request failed without a response.")
 
     parts = candidates[0].get("content", {}).get("parts", [])
     text_parts = [
