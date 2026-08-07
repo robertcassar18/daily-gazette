@@ -13,7 +13,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 TIMEZONE = ZoneInfo("Europe/Malta")
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 API_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/"
     f"{MODEL}:generateContent"
