@@ -13,11 +13,6 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 TIMEZONE = ZoneInfo("Europe/Malta")
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
-API_URL = (
-    f"https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{MODEL}:generateContent"
-)
 
 ROOT = Path(__file__).resolve().parent.parent
 FORCE_RUN = os.environ.get("FORCE_RUN", "0") == "1"
@@ -45,6 +40,82 @@ def should_run() -> bool:
         return False
 
     return True
+
+def get_latest_free_model(api_key: str) -> str:
+    """
+    Fetch available Gemini models from the API and return the latest
+    free-tier model that supports generateContent.
+
+    Free-tier models are those with "generateContent" in
+    supportedGenerationMethods. We filter for stable flash models
+    (excluding previews, lite variants, and audio models) and return
+    the one with the highest version number.
+    """
+    models_url = "https://generativelanguage.googleapis.com/v1beta/models"
+    query = urllib.parse.urlencode({"key": api_key})
+    request = urllib.request.Request(
+        f"{models_url}?{query}",
+        headers={"Content-Type": "application/json"},
+        method="GET",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            response_data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(
+            f"Failed to fetch Gemini models (HTTP {exc.code}): {error_body}"
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(
+            f"Could not connect to Gemini API to fetch models: {exc}"
+        ) from exc
+
+    models = response_data.get("models", [])
+    candidates = []
+
+    for model in models:
+        model_name = model.get("name", "")  # e.g. "models/gemini-3.6-flash"
+        supported_methods = model.get("supportedGenerationMethods", [])
+        base_model_id = model.get("baseModelId", "")
+
+        # Filter for models with generateContent and stable flash variants
+        if "generateContent" not in supported_methods:
+            continue
+
+        # Include stable flash models; exclude previews, lite, audio, and tts
+        if not any(
+            part in base_model_id.lower()
+            for part in ["flash"]
+        ):
+            continue
+        if any(
+            part in base_model_id.lower()
+            for part in ["preview", "lite", "audio", "tts", "live"]
+        ):
+            continue
+
+        candidates.append(base_model_id)
+
+    if not candidates:
+        raise RuntimeError(
+            "No free-tier Gemini models with generateContent support found. "
+            "Available models from API: " + json.dumps([m.get("baseModelId") for m in models])
+        )
+
+    # Sort by version number (extract major.minor and compare)
+    def extract_version(model_name: str) -> tuple:
+        # e.g., "gemini-3.6-flash" -> (3, 6)
+        match = re.search(r"gemini-(\d+)\.(\d+)", model_name)
+        if match:
+            return (int(match.group(1)), int(match.group(2)))
+        return (0, 0)
+
+    candidates.sort(key=extract_version, reverse=True)
+    latest_model = candidates[0]
+
+    return latest_model
 
 def build_prompt(date_string: str) -> str:
     return f"""
@@ -105,13 +176,18 @@ Do not use fabricated image URLs. If no reliable image is available for
 an article, omit its image rather than inventing a URL.
 """.strip()
 
-def call_gemini(prompt: str) -> str:
+def call_gemini(prompt: str, model: str) -> str:
     api_key = os.environ.get("GEMINI_API_KEY")
 
     if not api_key:
         raise RuntimeError(
             "GEMINI_API_KEY is not set. Add it as a GitHub Actions secret."
         )
+
+    api_url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{model}:generateContent"
+    )
 
     payload = {
         "contents": [
@@ -137,7 +213,7 @@ def call_gemini(prompt: str) -> str:
 
     query = urllib.parse.urlencode({"key": api_key})
     request = urllib.request.Request(
-        f"{API_URL}?{query}",
+        f"{api_url}?{query}",
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
@@ -435,14 +511,24 @@ def main():
     if not should_run():
         return
 
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "GEMINI_API_KEY is not set. Add it as a GitHub Actions secret."
+        )
+
+    print("Detecting latest available free-tier Gemini model...")
+    model = get_latest_free_model(api_key)
+    print(f"Using model: {model}")
+
     current = now_in_malta()
     date_string = current.strftime("%Y-%m-%d")
     output_path = ROOT / f"daily-{date_string}.html"
 
-    print(f"Generating digest for {date_string} using model {MODEL}...")
+    print(f"Generating digest for {date_string}...")
 
     prompt = build_prompt(date_string)
-    generated_html = call_gemini(prompt)
+    generated_html = call_gemini(prompt, model)
     generated_html = clean_generated_html(generated_html)
 
     output_path.write_text(generated_html, encoding="utf-8")
