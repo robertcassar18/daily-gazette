@@ -1,226 +1,168 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Daily Gazette - August 7, 2026</title>
-    <style>
-        body {
-            font-family: 'Georgia', 'Times New Roman', serif;
-            background-color: #f4f1ea;
-            color: #1a1a1a;
-            margin: 0;
-            padding: 20px;
-        }
-        .paper-container {
-            max-width: 980px;
-            margin: 0 auto;
-            background-color: #fcfbf9;
-            padding: 40px;
-            border: 1px solid #dcd7cd;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        header {
-            text-align: center;
-            border-bottom: 4px double #1a1a1a;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
-        }
-        .header-top {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 1px solid #1a1a1a;
-            padding-bottom: 6px;
-            margin-bottom: 15px;
-        }
-        h1.masthead {
-            font-family: 'Times New Roman', serif;
-            font-size: 3.8rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin: 0;
-            line-height: 1;
-        }
-        .tagline {
-            font-style: italic;
-            font-size: 1rem;
-            margin-top: 8px;
-            color: #444;
-        }
-        .columns {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 35px;
-        }
-        .main-column {
-            border-right: 1px solid #e0dacb;
-            padding-right: 35px;
-        }
-        .article {
-            margin-bottom: 35px;
-            border-bottom: 1px solid #eae5d9;
-            padding-bottom: 25px;
-        }
-        .article:last-child {
-            border-bottom: none;
-        }
-        .category-tag {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            font-size: 0.75rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            color: #8b0000;
-            letter-spacing: 1px;
-            margin-bottom: 6px;
-        }
-        h2 {
-            font-size: 1.85rem;
-            margin: 5px 0 12px 0;
-            line-height: 1.25;
-        }
-        h2 a, h3 a {
-            color: #1a1a1a;
-            text-decoration: none;
-        }
-        h2 a:hover, h3 a:hover {
-            color: #8b0000;
-        }
-        h3 {
-            font-size: 1.35rem;
-            margin: 5px 0 10px 0;
-            line-height: 1.3;
-        }
-        .article-img {
-            width: 100%;
-            height: auto;
-            margin: 12px 0 6px 0;
-            border: 1px solid #ccc;
-        }
-        .caption {
-            font-size: 0.8rem;
-            font-style: italic;
-            color: #555;
-            margin-bottom: 12px;
-        }
-        p {
-            font-size: 1rem;
-            line-height: 1.65;
-            margin: 0 0 12px 0;
-            text-align: justify;
-        }
-        .source-link {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: #004488;
-            text-decoration: none;
-            display: inline-block;
-            margin-top: 5px;
-        }
-        .source-link:hover {
-            text-decoration: underline;
-        }
-        footer {
-            margin-top: 35px;
-            border-top: 2px solid #1a1a1a;
-            padding-top: 15px;
-            text-align: center;
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            font-size: 0.8rem;
-            color: #555;
-        }
-        @media (max-width: 768px) {
-            .columns {
-                grid-template-columns: 1fr;
-            }
-            .main-column {
-                border-right: none;
-                padding-right: 0;
-            }
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Daily Maltese, European, international, technology, gadget, and space news digest">
+  <title>Daily News Digest</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d1d1d;
+      --paper: #f6f1e7;
+      --line: #262626;
+      --muted: #666;
+      --accent: #8d1f1f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    header {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 2rem 1rem 1rem;
+      text-align: center;
+      border-bottom: 4px double var(--line);
+    }
+
+    .kicker {
+      margin: 0 0 .4rem;
+      color: var(--accent);
+      font: 700 .8rem/1.2 Arial, sans-serif;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.4rem, 7vw, 5.5rem);
+      line-height: .95;
+      text-transform: uppercase;
+      letter-spacing: -.04em;
+    }
+
+    .subheading {
+      margin: .8rem 0 0;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .controls {
+      max-width: 1180px;
+      margin: 1rem auto;
+      padding: 0 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: .7rem;
+      font-family: Arial, sans-serif;
+    }
+
+    .controls label {
+      font-size: .9rem;
+      font-weight: 700;
+    }
+
+    select {
+      max-width: 100%;
+      padding: .55rem .7rem;
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 1rem 2rem;
+    }
+
+    .edition-date {
+      margin: 0 0 .75rem;
+      color: var(--muted);
+      font: .8rem Arial, sans-serif;
+      letter-spacing: .08em;
+      text-align: right;
+      text-transform: uppercase;
+    }
+
+    .digest-frame {
+      display: block;
+      width: 100%;
+      min-height: 78vh;
+      border: 1px solid var(--line);
+      background: white;
+    }
+
+    footer {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 1rem;
+      border-top: 4px double var(--line);
+      color: var(--muted);
+      font: .8rem/1.5 Arial, sans-serif;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <p class="kicker">The Daily Edition</p>
+    <h1>Daily News Digest</h1>
+    <p class="subheading">Malta · Europe · World · Technology · Space</p>
+  </header>
 
-<div class="paper-container">
-    <header>
-        <div class="header-top">
-            <span>Vol. CXXVI No. 43</span>
-            <span>Friday, August 7, 2026</span>
-            <span>Malta &amp; Global Tech Edition</span>
-        </div>
-        <h1 class="masthead">The Daily Gazette</h1>
-        <div class="tagline">"Verified Regional Intelligence, European Union Briefings &amp; Deep Tech Reporting"</div>
-    </header>
+  <div class="controls">
+    <label for="edition">Edition:</label>
+    <select id="edition" aria-label="Choose a news edition">
+        <option value="daily-2026-08-07.html">Friday, 07 August 2026</option>
+    </select>
+  </div>
 
-    <div class="columns">
-        <!-- Main Column -->
-        <div class="main-column">
-            
-            <!-- Malta Front Page -->
-            <article class="article">
-                <div class="category-tag">Malta Local News</div>
-                <h2><a href="https://timesofmalta.com" target="_blank">Northern Regional Health Hub Plans Advance &amp; Summer Public Health Precautions Intensify</a></h2>
-                <img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80" class="article-img" alt="Community Health Center Malta">
-                <div class="caption">Expansion of community healthcare services continues across the Maltese Islands following high regional patient turnout.</div>
-                <p>Following updates from Health Minister Ian Borg, site evaluations for a dedicated northern regional health centre are advancing smoothly. The proposed hub mirrors the success of the Paola Ċensu Moran facility, which has logged over 190,000 outpatient visits to date, aiming to significantly relieve congestion at Mater Dei Hospital.</p>
-                <p>In municipal health developments, health inspectors in Qormi report progress in contact tracing following a localized health alert linked to a food establishment. Simultaneously, an amber high-temperature alert remains active across the Maltese archipelago, with real-feel temperatures hovering near 41°C today. Environmental stakeholders also continue pressing the ERA regarding coastal conservation efforts across Comino and Gozo.</p>
-                <a href="https://timesofmalta.com" target="_blank" class="source-link">Read Full Coverage on Times of Malta &rarr;</a>
-            </article>
+  <main>
+    <p class="edition-date" id="edition-date">Edition: 2026-08-07</p>
+    <iframe
+      class="digest-frame"
+      id="digest"
+      title="Selected daily news digest"
+      src="daily-2026-08-07.html">
+    </iframe>
+  </main>
 
-            <!-- Frontier Space & Defense Tech -->
-            <article class="article">
-                <div class="category-tag">Space &amp; Orbital Logistics</div>
-                <h2><a href="https://techcrunch.com" target="_blank">Commercial Radar Satellites &amp; Agentic AI Reshape Low-Earth Orbit Management</a></h2>
-                <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80" class="article-img" alt="Earth from Low Orbit">
-                <div class="caption">Advanced Synthetic Aperture Radar (SAR) constellations provide real-time, all-weather planetary observations.</div>
-                <p>Following the recent defense contract award by the U.S. National Reconnaissance Office (NRO) to IonQ's space division, commercial Earth observation operators are accelerating the deployment of Synthetic Aperture Radar (SAR) systems into orbit. Unlike traditional optical sensors, SAR imagery delivers persistent, high-resolution surface data day or night through dense cloud cover.</p>
-                <p>Furthermore, satellite constellation management is seeing widespread adoption of autonomous agentic AI. Rather than relying on constant ground-station telemetry, next-gen satellites are now equipped with edge-compute AI models capable of autonomous path recalculation, collision prediction, and orbital debris avoidance in real-time.</p>
-                <a href="https://techcrunch.com" target="_blank" class="source-link">Explore Space &amp; Frontier Tech Coverage &rarr;</a>
-            </article>
+  <footer>
+    News links lead to the original publishers and sources.
+  </footer>
 
-        </div>
+  <script>
+    const selector = document.getElementById("edition");
+    const digest = document.getElementById("digest");
+    const editionDate = document.getElementById("edition-date");
 
-        <!-- Sidebar / Secondary Column -->
-        <div class="side-column">
-            
-            <!-- European Union News -->
-            <article class="article">
-                <div class="category-tag">European Union &amp; Policy</div>
-                <h3><a href="https://www.euronews.com" target="_blank">EU AI Act Enforcement Sets New Standard for Synthetic Media</a></h3>
-                <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=500&q=80" class="article-img" alt="EU Flag and Digital Technology">
-                <p>European regulatory bodies have begun enforcing mandatory transparency rules under Article 50 of the EU AI Act. Platforms deploying automated conversational agents, deepfake generators, and synthetic media must now embed clear metadata labels for consumer protection.</p>
-                <a href="https://www.euronews.com" target="_blank" class="source-link">Read Policy Update on Euronews &rarr;</a>
-            </article>
+    selector.addEventListener("change", function () {
+      const selectedFile = selector.value;
+      digest.src = selectedFile;
+      editionDate.textContent =
+        "Edition: " + selectedFile.replace("daily-", "").replace(".html", "");
+      history.replaceState(null, "", "#" + selectedFile);
+    });
 
-            <!-- Tech & Consumer Gadgets -->
-            <article class="article">
-                <div class="category-tag">Global Tech &amp; Gadgets</div>
-                <h3><a href="https://www.theverge.com" target="_blank">Next-Gen Wearable AR &amp; Spatial Glasses Market Expands</a></h3>
-                <img src="https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=500&q=80" class="article-img" alt="Smart Eyewear Wearable">
-                <p>Consumer electronics manufacturers are previewing late-2026 hardware lineups focused heavily on lightweight AR smart glasses, spatial audio integration, and advanced display panels, driving fresh dialogue around urban privacy standards.</p>
-                <a href="https://www.theverge.com" target="_blank" class="source-link">Read Hardware Trends on The Verge &rarr;</a>
-            </article>
-
-            <!-- Quick Briefs -->
-            <article class="article">
-                <div class="category-tag">Daily Advisory</div>
-                <h3>Malta Weather Brief</h3>
-                <p><strong>Hot &amp; Sunny:</strong> Highs reaching 35°C (feels like 41°C). UV Index elevated at 10. Stay hydrated during peak midday hours.</p>
-            </article>
-
-        </div>
-    </div>
-
-    <footer>
-        &copy; 2026 The Daily Gazette Syndicate. Curated daily for Malta, EU &amp; Frontier Technology Edition.
-    </footer>
-</div>
-
+    const hashFile = decodeURIComponent(location.hash.slice(1));
+    if (hashFile && [...selector.options].some(option => option.value === hashFile)) {
+      selector.value = hashFile;
+      digest.src = hashFile;
+      editionDate.textContent =
+        "Edition: " + hashFile.replace("daily-", "").replace(".html", "");
+    }
+  </script>
 </body>
 </html>

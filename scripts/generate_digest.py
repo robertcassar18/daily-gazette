@@ -16,8 +16,9 @@ TIMEZONE = ZoneInfo("Europe/Malta")
 
 ROOT = Path(__file__).resolve().parent.parent
 FORCE_RUN = os.environ.get("FORCE_RUN", "0") == "1"
-DEFAULT_MODEL = "gemini-2.0-flash"
-FALLBACK_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+
+class QuotaExceededError(RuntimeError):
+    pass
 
 def now_in_malta() -> datetime:
     return datetime.now(TIMEZONE)
@@ -43,61 +44,77 @@ def should_run() -> bool:
 
     return True
 
-def get_latest_free_model(api_key: str) -> str:
+def get_free_model_candidates(api_key: str) -> list[str]:
     """
-    Legacy helper retained for compatibility.
+    Return stable generateContent models sorted from newest to oldest version.
 
-    The workflow now uses the configured model directly to avoid an extra
-    Gemini API request that can consume free-tier quota before generation.
+    Excludes preview, lite, audio, tts, and live variants. The caller should
+    try models in order and skip any that return a quota error.
     """
-    return DEFAULT_MODEL
-
-
-def resolve_model(api_key: str, preferred_model: str | None = None) -> str:
-    """Resolve the Gemini model to use for generation."""
-    configured_model = (preferred_model or os.environ.get("GEMINI_MODEL", "")).strip()
-    if configured_model:
-        return configured_model
-
-    return DEFAULT_MODEL
-
-
-def format_gemini_error(status_code: int, error_body: str) -> str:
-    """Turn Gemini API failures into clearer quota guidance."""
-    body = error_body or ""
-    lower_body = body.lower()
-
-    if status_code == 429 or "quota" in lower_body or "exhausted" in lower_body or "rate limit" in lower_body:
-        return (
-            f"Gemini API quota exceeded (HTTP {status_code}). "
-            "This usually means the free-tier quota for your API key has been exhausted "
-            "or the account is being rate-limited. Wait for the quota window to reset, "
-            "use a different key, or reduce the number of workflow runs."
-        )
-
-    if status_code == 400 and (
-        "does not allow generating" in lower_body
-        or "does not support" in lower_body
-        or "unsupported model" in lower_body
-        or "not supported" in lower_body
-    ):
-        return (
-            f"Gemini model rejected the request (HTTP {status_code}). "
-            "The selected model may be unavailable for this endpoint or feature. "
-            "The script will retry with a more broadly supported model when possible."
-        )
-
-    return f"Gemini API returned HTTP {status_code}: {body}"
-
-
-def is_unsupported_model_error(status_code: int, error_body: str) -> bool:
-    body = (error_body or "").lower()
-    return status_code == 400 and (
-        "does not allow generating" in body
-        or "does not support" in body
-        or "unsupported model" in body
-        or "not supported" in body
+    models_url = "https://generativelanguage.googleapis.com/v1beta/models"
+    query = urllib.parse.urlencode({"key": api_key})
+    request = urllib.request.Request(
+        f"{models_url}?{query}",
+        headers={"Content-Type": "application/json"},
+        method="GET",
     )
+
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            response_data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(
+            f"Failed to fetch Gemini models (HTTP {exc.code}): {error_body}"
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(
+            f"Could not connect to Gemini API to fetch models: {exc}"
+        ) from exc
+
+    models = response_data.get("models", [])
+    candidates = []
+
+    for model in models:
+        # name is like "models/gemini-2.5-flash"
+        model_name = model.get("name", "")
+        supported_methods = model.get("supportedGenerationMethods", [])
+
+        # Extract the model ID (remove "models/" prefix)
+        model_id = model_name.split("/")[-1] if model_name else ""
+        
+        if not model_id:
+            continue
+
+        # Filter for models with generateContent support
+        if "generateContent" not in supported_methods:
+            continue
+
+        # Exclude previews, lite, audio, tts, and live variants
+        if any(
+            part in model_id.lower()
+            for part in ["preview", "lite", "audio", "tts", "live"]
+        ):
+            continue
+
+        candidates.append(model_id)
+
+    if not candidates:
+        raise RuntimeError(
+            "No free-tier Gemini models with generateContent support found. "
+            "Available models from API: " + json.dumps([m.get("name", "").split("/")[-1] for m in models])
+        )
+
+    # Sort by version number (extract major.minor and compare)
+    def extract_version(model_name: str) -> tuple:
+        # e.g., "gemini-3.6-flash" -> (3, 6)
+        match = re.search(r"gemini-(\d+)\.(\d+)", model_name)
+        if match:
+            return (int(match.group(1)), int(match.group(2)))
+        return (0, 0)
+
+    candidates.sort(key=extract_version, reverse=True)
+    return candidates
 
 def build_prompt(date_string: str) -> str:
     return f"""
@@ -110,18 +127,22 @@ The digest must focus on the following areas:
    - Include politics, public affairs, business, transport, courts,
      environment, health, education, culture, and other significant
      local developments where relevant.
+    
+2. Maltese Courtroom Updates
+   - Give a digest of the current courtroom proceedings.
+   - Include any salient details and highlights that have come out.
 
-2. European and international news
+3. European and international news
    - Include a high-level overview of important European-wide news.
    - Include major international stories that are relevant to readers
      in Malta and Europe.
 
-3. Technology and gadgets
+4. Technology and gadgets
    - Include global technology news.
    - Cover important companies, software, artificial intelligence,
      cybersecurity, consumer electronics, gadgets, products, and trends.
 
-4. Space
+5. Space
    - Include significant spaceflight, astronomy, NASA, ESA, launch,
      satellite, and space science news.
 
@@ -166,92 +187,65 @@ def call_gemini(prompt: str, model: str) -> str:
             "GEMINI_API_KEY is not set. Add it as a GitHub Actions secret."
         )
 
-    candidates = [model]
-    for fallback_model in FALLBACK_MODELS:
-        if fallback_model not in candidates:
-            candidates.append(fallback_model)
+    api_url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{model}:generateContent"
+    )
 
-    last_error = None
-    for attempt_model in candidates:
-        api_url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{attempt_model}:generateContent"
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": prompt,
+                    }
+                ],
+            }
+        ],
+        "tools": [
+            {
+                "google_search": {}
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.3,
+            "maxOutputTokens": 30000,
+        },
+    }
+
+    query = urllib.parse.urlencode({"key": api_key})
+    request = urllib.request.Request(
+        f"{api_url}?{query}",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=180) as response:
+            response_data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        if exc.code == 429:
+            raise QuotaExceededError(
+                f"Quota exceeded for model {model}: {error_body}"
+            ) from exc
+        raise RuntimeError(
+            f"Gemini API returned HTTP {exc.code}: {error_body}"
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Could not connect to Gemini API: {exc}") from exc
+
+    candidates = response_data.get("candidates", [])
+
+    if not candidates:
+        raise RuntimeError(
+            "Gemini returned no candidates:\n"
+            + json.dumps(response_data, indent=2)
         )
-
-        payload = {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [
-                        {
-                            "text": prompt,
-                        }
-                    ],
-                }
-            ],
-            "tools": [
-                {
-                    "google_search": {}
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.3,
-                "maxOutputTokens": 30000,
-            },
-        }
-
-        query = urllib.parse.urlencode({"key": api_key})
-        request = urllib.request.Request(
-            f"{api_url}?{query}",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
-
-        try:
-            with urllib.request.urlopen(request, timeout=180) as response:
-                response_data = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            error_body = exc.read().decode("utf-8", errors="replace")
-            last_error = (exc.code, error_body)
-            if is_unsupported_model_error(exc.code, error_body) and attempt_model != candidates[-1]:
-                print(
-                    f"Model {attempt_model} rejected the request; retrying with {candidates[candidates.index(attempt_model) + 1]}",
-                    file=sys.stderr,
-                )
-                continue
-            raise RuntimeError(format_gemini_error(exc.code, error_body)) from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"Could not connect to Gemini API: {exc}") from exc
-
-        candidates = response_data.get("candidates", [])
-
-        if not candidates:
-            raise RuntimeError(
-                "Gemini returned no candidates:\n"
-                + json.dumps(response_data, indent=2)
-            )
-
-        parts = candidates[0].get("content", {}).get("parts", [])
-        text_parts = [
-            part.get("text", "")
-            for part in parts
-            if isinstance(part, dict) and part.get("text")
-        ]
-
-        result = "\n".join(text_parts).strip()
-
-        if not result:
-            raise RuntimeError("Gemini returned an empty response.")
-
-        return result
-
-    if last_error:
-        raise RuntimeError(format_gemini_error(last_error[0], last_error[1]))
-
-    raise RuntimeError("Gemini request failed without a response.")
 
     parts = candidates[0].get("content", {}).get("parts", [])
     text_parts = [
@@ -530,8 +524,9 @@ def main():
             "GEMINI_API_KEY is not set. Add it as a GitHub Actions secret."
         )
 
-    model = resolve_model(api_key)
-    print(f"Using model: {model}")
+    print("Detecting available free-tier Gemini models...")
+    candidates = get_free_model_candidates(api_key)
+    print(f"Candidates (newest first): {', '.join(candidates)}")
 
     current = now_in_malta()
     date_string = current.strftime("%Y-%m-%d")
@@ -540,7 +535,23 @@ def main():
     print(f"Generating digest for {date_string}...")
 
     prompt = build_prompt(date_string)
-    generated_html = call_gemini(prompt, model)
+    generated_html = None
+    for model in candidates:
+        print(f"Trying model: {model}")
+        try:
+            generated_html = call_gemini(prompt, model)
+            print(f"Using model: {model}")
+            break
+        except QuotaExceededError as exc:
+            print(f"Quota exceeded for {model}, trying next candidate...")
+            continue
+
+    if generated_html is None:
+        raise RuntimeError(
+            "All candidate models returned quota errors. "
+            f"Tried: {', '.join(candidates)}"
+        )
+
     generated_html = clean_generated_html(generated_html)
 
     output_path.write_text(generated_html, encoding="utf-8")
