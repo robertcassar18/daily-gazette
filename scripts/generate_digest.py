@@ -99,6 +99,11 @@ def get_free_model_candidates(api_key: str) -> list[str]:
 
         candidates.append(model_id)
 
+    # Exclude deprecated models that are no longer available to new users.
+    # Some accounts cannot access older releases (for example: gemini-2.5-flash).
+    deprecated_models = {"gemini-2.5-flash", "gemini-2.5"}
+    candidates = [c for c in candidates if not any(d in c for d in deprecated_models)]
+
     if not candidates:
         raise RuntimeError(
             "No free-tier Gemini models with generateContent support found. "

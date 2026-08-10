@@ -10,7 +10,7 @@ Add this repository secret:
 
 Optional repository variable:
 
-`GEMINI_MODEL` (defaults to `gemini-2.5-flash`)
+`GEMINI_MODEL` (optional; defaults to the auto-detected latest free-tier Gemini model)
 
 ## GitHub Pages
 
