@@ -21,7 +21,7 @@ Optional repository variable:
 5. For an apex domain, use GitHub's current Pages A records.
 6. Enable HTTPS after DNS has propagated.
 
-The workflow commits `index.html` and `daily-YYYY-MM-DD.html` to the selected branch. `index.html` is rebuilt after each edition and contains a native calendar picker. The newest available edition is loaded by default; unavailable dates are rejected.
+The workflow commits `index.html` and `news_archive/daily-YYYY-MM-DD.html` to the selected branch. `index.html` is rebuilt after each edition and contains a native calendar picker. The newest available edition is loaded by default; unavailable dates are rejected.
 
 ## Schedule
 

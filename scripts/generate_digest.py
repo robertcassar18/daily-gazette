@@ -320,7 +320,7 @@ def clean_generated_html(document: str) -> str:
 
 def digest_files():
     return sorted(
-        ROOT.glob("daily-????-??-??.html"),
+        ROOT.glob("news_archive/daily-????-??-??.html"),
         key=lambda path: path.name,
         reverse=True,
     )
@@ -341,154 +341,47 @@ def build_index() -> str:
         except ValueError:
             display_date = date_part
 
+        relative_path = path.relative_to(ROOT).as_posix()
         options.append(
-            f'        <option value="{html.escape(path.name)}">'
+            f'        <option value="{html.escape(relative_path)}">'
             f"{html.escape(display_date)}</option>"
         )
 
-    latest_file = files[0].name
+    latest_file = files[0].relative_to(ROOT).as_posix()
     latest_label = files[0].stem.removeprefix("daily-")
 
-    return f"""<!doctype html>
+    return """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Daily Maltese, European, international, technology, gadget, and space news digest">
   <title>Daily News Digest</title>
-  <style>
-    :root {{
-      color-scheme: light;
-      --ink: #1d1d1d;
-      --paper: #f6f1e7;
-      --line: #262626;
-      --muted: #666;
-      --accent: #8d1f1f;
-    }}
-
-    * {{
-      box-sizing: border-box;
-    }}
-
-    body {{
-      margin: 0;
-      color: var(--ink);
-      background: var(--paper);
-      font-family: Georgia, "Times New Roman", serif;
-    }}
-
-    header {{
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 2rem 1rem 1rem;
-      text-align: center;
-      border-bottom: 4px double var(--line);
-    }}
-
-    .kicker {{
-      margin: 0 0 .4rem;
-      color: var(--accent);
-      font: 700 .8rem/1.2 Arial, sans-serif;
-      letter-spacing: .18em;
-      text-transform: uppercase;
-    }}
-
-    h1 {{
-      margin: 0;
-      font-size: clamp(2.4rem, 7vw, 5.5rem);
-      line-height: .95;
-      text-transform: uppercase;
-      letter-spacing: -.04em;
-    }}
-
-    .subheading {{
-      margin: .8rem 0 0;
-      color: var(--muted);
-      font-style: italic;
-    }}
-
-    .controls {{
-      max-width: 1180px;
-      margin: 1rem auto;
-      padding: 0 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: .7rem;
-      font-family: Arial, sans-serif;
-    }}
-
-    .controls label {{
-      font-size: .9rem;
-      font-weight: 700;
-    }}
-
-    select {{
-      max-width: 100%;
-      padding: .55rem .7rem;
-      border: 1px solid var(--line);
-      background: white;
-      color: var(--ink);
-      font: inherit;
-    }}
-
-    main {{
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 0 1rem 2rem;
-    }}
-
-    .edition-date {{
-      margin: 0 0 .75rem;
-      color: var(--muted);
-      font: .8rem Arial, sans-serif;
-      letter-spacing: .08em;
-      text-align: right;
-      text-transform: uppercase;
-    }}
-
-    .digest-frame {{
-      display: block;
-      width: 100%;
-      min-height: 78vh;
-      border: 1px solid var(--line);
-      background: white;
-    }}
-
-    footer {{
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 1rem;
-      border-top: 4px double var(--line);
-      color: var(--muted);
-      font: .8rem/1.5 Arial, sans-serif;
-      text-align: center;
-    }}
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <p class="kicker">The Daily Edition</p>
-    <h1>Daily News Digest</h1>
-    <p class="subheading">Malta · Europe · World · Technology · Space</p>
-  </header>
-
-  <div class="controls">
-    <label for="edition">Edition:</label>
-    <select id="edition" aria-label="Choose a news edition">
-{chr(10).join(options)}
-    </select>
+  <div class="top-ribbon">
+    <div class="ribbon-brand">
+      <span class="logo-mark">DND</span>
+      <div class="logo-copy">
+        <p class="kicker">The Daily Edition</p>
+        <h1>Daily News Digest</h1>
+        <p>Malta · Europe · World · Technology · Space</p>
+      </div>
+    </div>
+    <div class="ribbon-controls">
+      <label for="edition">Edition</label>
+      <select id="edition" aria-label="Choose a news edition">
+{OPTIONS}
+      </select>
+    </div>
   </div>
 
-  <main>
-    <p class="edition-date" id="edition-date">Edition: {html.escape(latest_label)}</p>
-    <iframe
-      class="digest-frame"
-      id="digest"
-      title="Selected daily news digest"
-      src="{html.escape(latest_file)}">
-    </iframe>
-  </main>
+  <div class="page-shell">
+    <main class="content-card">
+      <div class="digest-content" id="digest-content" aria-live="polite"></div>
+    </main>
+  </div>
 
   <footer>
     News links lead to the original publishers and sources.
@@ -496,28 +389,68 @@ def build_index() -> str:
 
   <script>
     const selector = document.getElementById("edition");
-    const digest = document.getElementById("digest");
-    const editionDate = document.getElementById("edition-date");
+    const digestContent = document.getElementById("digest-content");
 
-    selector.addEventListener("change", function () {{
-      const selectedFile = selector.value;
-      digest.src = selectedFile;
-      editionDate.textContent =
-        "Edition: " + selectedFile.replace("daily-", "").replace(".html", "");
-      history.replaceState(null, "", "#" + selectedFile);
-    }});
+    function formatEditionLabel(file) {
+      return file
+        .split("/")
+        .pop()
+        .replace("daily-", "")
+        .replace(".html", "");
+    }
+
+    function renderEdition(file) {
+      digestContent.innerHTML = '<p class="edition-date">Loading edition…</p>';
+
+      fetch(file)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Unable to load edition");
+          }
+          return response.text();
+        })
+        .then((html) => {
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const container = doc.querySelector(".container");
+
+          digestContent.innerHTML = "";
+
+          if (container) {
+            const clonedContainer = container.cloneNode(true);
+            clonedContainer.querySelector(".masthead")?.remove();
+            digestContent.appendChild(clonedContainer);
+          } else {
+            const fallback = document.createElement("div");
+            fallback.className = "digest-simple";
+            fallback.innerHTML = (doc.body?.innerHTML || html).trim() || "<p>The selected edition could not be rendered.</p>";
+            digestContent.appendChild(fallback);
+          }
+
+          history.replaceState(null, "", "#" + file);
+          digestContent.insertAdjacentHTML(
+            "afterbegin",
+            `<p class="edition-date">Edition: ${formatEditionLabel(file)}</p>`
+          );
+        })
+        .catch(() => {
+          digestContent.innerHTML = '<p class="edition-date">The selected edition could not be loaded.</p>';
+        });
+    }
+
+    selector.addEventListener("change", function () {
+      renderEdition(selector.value);
+    });
 
     const hashFile = decodeURIComponent(location.hash.slice(1));
-    if (hashFile && [...selector.options].some(option => option.value === hashFile)) {{
+    if (hashFile && [...selector.options].some((option) => option.value === hashFile)) {
       selector.value = hashFile;
-      digest.src = hashFile;
-      editionDate.textContent =
-        "Edition: " + hashFile.replace("daily-", "").replace(".html", "");
-    }}
+    }
+
+    renderEdition(selector.value);
   </script>
 </body>
 </html>
-"""
+""".replace("{OPTIONS}", chr(10).join(options))
 
 def main():
     if not should_run():
@@ -535,7 +468,8 @@ def main():
 
     current = now_in_malta()
     date_string = current.strftime("%Y-%m-%d")
-    output_path = ROOT / f"daily-{date_string}.html"
+    output_path = ROOT / "news_archive" / f"daily-{date_string}.html"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Generating digest for {date_string}...")
 
