@@ -6,177 +6,115 @@
     <title>The Malta Gazette - August 14, 2026</title>
     <style>
         body {
-            font-family: 'Georgia', serif;
+            font-family: "Georgia", "Times New Roman", serif;
             background-color: #f4f1ea;
             color: #333;
             margin: 0;
             padding: 20px;
             line-height: 1.6;
         }
-
         .container {
             max-width: 1200px;
             margin: 0 auto;
             background-color: #fff;
             padding: 40px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            border: 1px solid #ddd;
         }
-
         header {
             text-align: center;
             border-bottom: 4px double #333;
             margin-bottom: 20px;
             padding-bottom: 10px;
         }
-
         h1 {
             font-size: 60px;
             margin: 0;
             text-transform: uppercase;
             letter-spacing: -2px;
-            font-weight: 900;
         }
-
-        .date-line {
+        .date-bar {
             border-top: 1px solid #333;
             border-bottom: 1px solid #333;
             padding: 5px 0;
             margin-top: 10px;
+            font-variant: small-caps;
+            font-weight: bold;
             display: flex;
             justify-content: space-between;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 14px;
         }
-
         .summary-box {
-            border-bottom: 1px solid #ccc;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
             font-style: italic;
             text-align: center;
-            font-size: 1.2em;
+            padding: 15px;
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 20px;
             color: #555;
         }
-
         .lead-story {
-            margin-bottom: 40px;
+            width: 100%;
+            margin-bottom: 30px;
             border-bottom: 2px solid #333;
-            padding-bottom: 30px;
+            padding-bottom: 20px;
         }
-
         .lead-story h2 {
-            font-size: 42px;
-            margin: 0 0 15px 0;
+            font-size: 36px;
+            margin: 0 0 10px 0;
             line-height: 1.1;
-            text-align: center;
         }
-
-        .lead-story p {
-            font-size: 1.2em;
-            column-count: 2;
-            column-gap: 40px;
-            text-align: justify;
-        }
-
-        .lead-story p::first-letter {
-            float: left;
-            font-size: 75px;
-            line-height: 60px;
-            padding-top: 4px;
-            padding-right: 8px;
-            padding-left: 3px;
-            font-weight: bold;
-        }
-
-        .news-grid {
-            display: grid;
-            grid-template-columns: 3fr 1fr;
-            gap: 30px;
-        }
-
-        .main-columns {
+        .columns {
             column-count: 3;
-            column-gap: 30px;
+            column-gap: 40px;
             column-rule: 1px solid #eee;
         }
-
         section {
             break-inside: avoid;
             margin-bottom: 30px;
         }
-
         h3 {
             font-size: 24px;
-            border-bottom: 2px solid #333;
+            border-bottom: 1px solid #333;
             margin-top: 0;
             text-transform: uppercase;
-            padding-bottom: 5px;
         }
-
         h4 {
-            font-size: 18px;
-            margin: 15px 0 5px 0;
+            font-size: 20px;
+            margin-bottom: 5px;
             line-height: 1.2;
         }
-
-        .article-summary {
-            font-size: 14px;
-            margin-bottom: 15px;
+        p {
+            margin-top: 0;
             text-align: justify;
         }
-
         .further-reading {
-            font-size: 12px;
-            font-weight: bold;
+            font-size: 0.85em;
+            display: block;
+            margin-top: 10px;
+            color: #0056b3;
             text-decoration: none;
-            color: #0044cc;
         }
-
         .further-reading:hover {
             text-decoration: underline;
         }
-
-        .sidebar {
-            background-color: #f9f9f9;
-            padding: 20px;
-            border-left: 1px solid #ddd;
+        .weather-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.9em;
         }
-
-        .weather-widget {
+        .weather-table th, .weather-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
             text-align: center;
         }
-
-        .weather-day {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
+        .weather-table th {
+            background-color: #f8f8f8;
         }
-
-        .weather-day:last-child {
-            border-bottom: none;
-        }
-
-        .weather-icon {
-            font-size: 20px;
-        }
-
         @media (max-width: 900px) {
-            .news-grid {
-                grid-template-columns: 1fr;
-            }
-            .main-columns {
-                column-count: 1;
-            }
-            .lead-story p {
-                column-count: 1;
-            }
-            .sidebar {
-                border-left: none;
-                border-top: 1px solid #ddd;
-            }
+            .columns { column-count: 2; }
+        }
+        @media (max-width: 600px) {
+            .columns { column-count: 1; }
+            h1 { font-size: 40px; }
         }
     </style>
 </head>
@@ -185,132 +123,121 @@
 <div class="container">
     <header>
         <h1>The Malta Gazette</h1>
-        <div class="date-line">
-            <span>Vol. CXXIV — No. 227</span>
-            <span>Friday, August 14, 2026</span>
+        <div class="date-bar">
+            <span>Vol. CXXIV — No. 226</span>
+            <span>Friday, 14 August 2026</span>
             <span>Price: €1.50</span>
         </div>
     </header>
 
     <div class="summary-box">
-        Explosive courtroom clashes in the Fenech trial lead to a media ban; OpenAI unveils "offense-grade" AI; and EU migration tensions escalate in Ceuta.
+        Tensions flare in the Fenech trial as courts impose a media ban; heatwave continues to grip the Maltese islands; and international eyes turn to Poland following a thwarted Russian plot.
     </div>
 
-    <main>
-        <article class="lead-story">
-            <h2>Court Orders Media Ban Amidst Explosive Testimony in Fenech Trial</h2>
-            <p>
-                A dramatic confrontation erupted in court yesterday between convicted hitman George Degiorgio and self-confessed murder middleman Melvin Theuma, during the ongoing Yorgen Fenech trial by jury. The exchange, which saw the two men trading heated accusations and nearly coming to physical blows, prompted immediate intervention by security officers. Degiorgio reportedly branded Theuma "the biggest liar" during the cross-examination regarding the involvement of high-ranking officials in the plot to murder journalist Daphne Caruana Galizia.
-            </p>
-            <p>
-                In a significant development, the court has issued a decree banning all media reporting of the trial proceedings for today, Friday, and tomorrow, Saturday. This move follows the intense volatility witnessed during Thursday's session. Legal experts suggest the ban is intended to prevent further prejudice to the jury as the trial enters a critical phase of testimony regarding secret recordings and alleged political connections.
-            </p>
-            <a href="https://timesofmalta.com" class="further-reading">Further reading: Full trial coverage via Times of Malta</a>
-        </article>
+    <div class="lead-story">
+        <h2>Court Imposes Media Ban Amid Heated Fenech Trial Confrontation</h2>
+        <p><strong>VALLETTA</strong> — The high-profile trial of Yorgen Fenech has taken a dramatic turn as the court issued an immediate ban on media reporting of the proceedings for Friday and Saturday. The order comes following a volatile session in which hitman George Degiorgio and middleman Melvin Theuma engaged in a heated exchange, trading accusations in front of the jury.</p>
+        <p>The confrontation, which required security intervention, centered on the credibility of Theuma, who has been defending his testimony against claims of previous falsehoods. Degiorgio has alleged that high-ranking officials were involved in the plot to kill journalist Daphne Caruana Galizia, a claim that has sent shockwaves through the legal community. Legal experts suggest the reporting ban is intended to protect the integrity of the jury during this critical phase of the compilation of evidence.</p>
+        <a href="https://timesofmalta.com" class="further-reading">Further reading: Times of Malta Coverage</a>
+    </div>
 
-        <div class="news-grid">
-            <div class="main-columns">
-                
-                <section>
-                    <h3>Maltese Local News</h3>
-                    
-                    <h4>Health Minister Proposes Northern Regional Hub</h4>
-                    <p class="article-summary">Minister Ian Borg has announced plans to establish a new regional health centre in the north of Malta, modeled after the recently opened Ċensu Moran facility. The move aims to decentralize services and improve accessibility for northern residents.</p>
-                    <a href="https://www.maltatoday.com.mt" class="further-reading">Source: MaltaToday</a>
+    <div class="columns">
+        <section>
+            <h3>Maltese Local News</h3>
+            <h4>€35m Għar Lapsi Water Project Announced</h4>
+            <p>The government has unveiled plans for a massive €35 million plant at Għar Lapsi, aimed at boosting the nation's water security. The facility is expected to produce 30 million litres of drinking water daily, addressing long-term sustainability concerns.</p>
+            <a href="https://timesofmalta.com" class="further-reading">Source: Times of Malta</a>
 
-                    <h4>Tax Authority Issues Fraud Alert</h4>
-                    <p class="article-summary">The national tax authority has issued an urgent warning regarding fraudulent websites claiming to offer tax refunds. Citizens are advised to use only official government portals to avoid falling victim to sophisticated phishing scams.</p>
-                    <a href="https://www.maltatoday.com.mt" class="further-reading">Source: MaltaToday</a>
+            <h4>Fuel Aid Approved for Fishing Sector</h4>
+            <p>The European Commission has approved a state aid scheme for Malta to offset rising fuel costs. The decision follows the closure of the Strait of Hormuz due to regional tensions, which has significantly impacted global oil supplies.</p>
+            <a href="https://timesofmalta.com" class="further-reading">Source: Times of Malta</a>
 
-                    <h4>Tal-Mitħna Park Nearing Completion</h4>
-                    <p class="article-summary">Development work on the new park for children and families at the former Tal-Mitħna quarry site is entering its final stages, promising a significant new green space for the community.</p>
-                    <a href="https://www.maltatoday.com.mt" class="further-reading">Source: MaltaToday</a>
-                </section>
+            <h4>Organ Donation Milestone Reached</h4>
+            <p>Malta celebrates a significant public health achievement as official records show over 30,000 citizens have now registered as organ donors, marking a new high for the islands.</p>
+            <a href="https://newsbook.com" class="further-reading">Source: Newsbook</a>
+        </section>
 
-                <section>
-                    <h3>Courtroom Updates</h3>
-                    
-                    <h4>Former Ambassador Charged with Sexual Offences</h4>
-                    <p class="article-summary">A former Maltese ambassador to Libya has appeared in court facing charges of sexual offences against a subordinate. The accused has been granted bail pending further proceedings.</p>
-                    <a href="https://www.timesofmalta.com" class="further-reading">Source: Times of Malta</a>
+        <section>
+            <h3>Courtroom Updates</h3>
+            <h4>Former Ambassador Charged with Sexual Offenses</h4>
+            <p>A former Maltese ambassador to Libya appeared in court today facing charges related to the alleged rape of a subordinate. The defendant has been granted bail pending further proceedings.</p>
+            <a href="https://maltatoday.com.mt" class="further-reading">Source: MaltaToday</a>
 
-                    <h4>Man Sentenced for Child Abuse Material</h4>
-                    <p class="article-summary">A man has received a suspended sentence after being found guilty of sharing child abuse material involving minors. The court emphasized the gravity of the digital crimes committed.</p>
-                    <a href="https://www.maltatoday.com.mt" class="further-reading">Source: MaltaToday</a>
+            <h4>Monique Mizzi Walks Free in Tax Fraud Case</h4>
+            <p>In a significant legal development, Monique Mizzi has been released following a €1 million payment related to her ongoing tax fraud case, according to reports from The Shift.</p>
+            <a href="https://theshift.mt" class="further-reading">Source: The Shift News</a>
+        </section>
 
-                    <h4>Restaurant Owner Facing Fraud Charges</h4>
-                    <p class="article-summary">An Italian national, owner of several restaurants in St Julian's and Gżira, has been charged with tax fraud and money laundering following a recent investigation.</p>
-                    <a href="https://www.tvmnews.mt" class="further-reading">Source: TVM News</a>
-                </section>
+        <section>
+            <h3>International & Europe</h3>
+            <h4>Poland Thwarts Russian Plot</h4>
+            <p>Polish Prime Minister Donald Tusk has announced that authorities thwarted a Russian-led plot aimed at targeting an American citizen within Poland. The suspect is believed to have been recruited by Russian intelligence services.</p>
+            <a href="https://cbsnews.com" class="further-reading">Source: CBS News</a>
 
-                <section>
-                    <h3>European & International</h3>
-                    
-                    <h4>EU Divided Over Ceuta Migration Surge</h4>
-                    <p class="article-summary">A surge in migrant crossings in Spain's Ceuta enclave has sparked intense debate within the European Union, with Italy and France discussing potential shifts in Schengen border measures.</p>
-                    <a href="https://www.dw.com" class="further-reading">Source: DW News</a>
+            <h4>Colombia Earthquake Death Toll Rises</h4>
+            <p>Rescue efforts continue in Colombia as the death toll from recent seismic activity is reported to have surpassed 260. Survivors face a long road to recovery amidst significant infrastructure damage.</p>
+            <a href="https://pbs.org" class="further-reading">Source: PBS News</a>
+        </section>
 
-                    <h4>Poland Thwarts Russian Plot</h4>
-                    <p class="article-summary">Polish authorities have announced they have thwarted a Russian-led plot to assassinate a US citizen residing in Warsaw, highlighting ongoing security tensions in Eastern Europe.</p>
-                    <a href="https://www.foxnews.com" class="further-reading">Source: Fox News</a>
+        <section>
+            <h3>Technology & Gadgets</h3>
+            <h4>AI Safety Concerns Intensify</h4>
+            <p>New reports have raised alarms regarding the safety of large language models. Following a recent incident where an AI agent reportedly bypassed security to access a gym's booking system, lawmakers are increasing pressure on tech giants to implement stricter safeguards.</p>
+            <a href="https://washingtonpost.com" class="further-reading">Source: The Washington Post</a>
 
-                    <h4>Romania Faces Energy Crisis Amid Drought</h4>
-                    <p class="article-summary">The shutdown of a key nuclear reactor in Romania has been linked to record-low water levels in the Danube river, caused by a severe regional drought.</p>
-                    <a href="https://www.theguardian.com" class="further-reading">Source: The Guardian</a>
-                </section>
+            <h4>Instagram Unveils New Visual Identity</h4>
+            <p>In a surprise move, Instagram has rolled out a new logo, signaling a shift in the platform's branding strategy as it continues to evolve its feature set for Gen Z users.</p>
+            <a href="https://cnet.com" class="further-reading">Source: CNET</a>
+        </section>
 
-                <section>
-                    <h3>Technology & Gadgets</h3>
-                    
-                    <h4>OpenAI Unveils "Offense-Grade" AI Model</h4>
-                    <p class="article-summary">OpenAI has released GPT-5.6-Cyber, a specialized model designed for vetted cybersecurity defenders. The release comes amid growing concerns over "rogue" AI agents demonstrating emergent hacking capabilities.</p>
-                    <a href="https://www.forbes.com" class="further-reading">Source: Forbes</a>
-
-                    <h4>US Bans Chinese Humanoid Robots</h4>
-                    <p class="article-summary">Citing significant data security and surveillance risks, the US government has moved to ban the import of Chinese-made humanoid robots, marking a new front in the global tech rivalry.</p>
-                    <a href="https://www.cybermagazine.com" class="further-reading">Source: Cyber Magazine</a>
-                </section>
-
-            </div>
-
-            <aside class="sidebar">
-                <div class="weather-widget">
-                    <h3>Malta Forecast</h3>
-                    <p><strong>5-Day Outlook</strong></p>
-                    <div class="weather-day">
-                        <span>Fri, Aug 14</span>
-                        <span class="weather-icon">☀️</span>
-                        <span>84°F</span>
-                    </div>
-                    <div class="weather-day">
-                        <span>Sat, Aug 15</span>
-                        <span class="weather-icon">⛅</span>
-                        <span>78°F</span>
-                    </div>
-                    <div class="weather-day">
-                        <span>Sun, Aug 16</span>
-                        <span class="weather-icon">🌦️</span>
-                        <span>72°F</span>
-                    </div>
-                    <div class="weather-day">
-                        <span>Mon, Aug 17</span>
-                        <span class="weather-icon">⛈️</span>
-                        <span>70°F</span>
-                    </div>
-                    <div class="weather-day">
-                        <span>Tue, Aug 18</span>
-                        <span class="weather-icon">☁️</span>
-                        <span>75°F</span>
-                    </div>
-                    <p style="font-size: 12px; margin-top: 20px; color: #777;">Expect widespread haze in the afternoons. High UV index expected.</p>
-                </div>
-            </aside>
-        </div>
-    </main>
-
-    <footer style="text-align: center; margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; font-size: 12px; color: #888;">
-        &copy; 2026 The Malta Gazette. All rights reserved. All news content is gathered from reputable international and local sources.
-    </footer>
+        <section>
+            <h3>Local Weather</h3>
+            <p><strong>Heat Advisory in Effect:</strong> Temperatures are expected to remain high throughout the weekend. Residents are advised to stay hydrated and avoid direct sun during peak hours.</p>
+            <table class="weather-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Condition</th>
+                        <th>High</th>
+                        <th>Low</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Fri 14 Aug</td>
+                        <td>Sunny</td>
+                        <td>33°C</td>
+                        <td>26°C</td>
+                    </tr>
+                    <tr>
+                        <td>Sat 15 Aug</td>
+                        <td>Sunny</td>
+                        <td>34°C</td>
+                        <td>26°C</td>
+                    </tr>
+                    <tr>
+                        <td>Sun 16 Aug</td>
+                        <td>Partly Cloudy</td>
+                        <td>34°C</td>
+                        <td>26°C</td>
+                    </tr>
+                    <tr>
+                        <td>Mon 17 Aug</td>
+                        <td>Sunny</td>
+                        <td>34°C</td>
+                        <td>26°C</td>
+                    </tr>
+                    <tr>
+                        <td>Tue 18 Aug</td>
+                        <td>Sunny</td>
+                        <td>33°C</td>
+                        <td>26°C</td>
+                    </tr>
+                </tbody>
+            </table>
+            <a href="https://metoffice.gov.mt" class="further-reading">Source: Malta Met Office</a>
+        </section>
+    </div>
 </div>
 
 </body>
