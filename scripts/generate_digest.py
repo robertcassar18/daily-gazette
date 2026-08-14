@@ -468,13 +468,35 @@ def _commons_search(query: str, width: int = 800) -> str | None:
         mime = info.get("mime", "")
         if not mime.startswith("image/"):
             continue
-        # Skip SVG even if MIME says image
+        # Skip SVG, PNG flags/logos, and vector formats
         if "svg" in mime or "svg" in title.lower():
             continue
+        if mime == "image/png" and any(
+            w in title.lower() for w in ["flag", "logo", "icon", "map", "seal", "coat"]
+        ):
+            continue
         thumb = info.get("thumburl", "")
-        if thumb:
+        if not thumb:
+            continue
+        # Verify the URL actually serves an image (guards against rate-limit
+        # responses being cached and 429s masquerading as valid results).
+        if _verify_image_url(thumb):
             return thumb
     return None
+
+
+def _verify_image_url(url: str) -> bool:
+    """Return True only if the URL responds 200 with an image content-type."""
+    try:
+        req = urllib.request.Request(
+            url, method="HEAD",
+            headers={"User-Agent": "DailyGazette/1.0 (https://github.com/robertcassar18/daily-gazette)"},
+        )
+        with urllib.request.urlopen(req, timeout=6) as r:
+            ct = r.headers.get("Content-Type", "")
+            return r.status == 200 and ct.startswith("image/") and "svg" not in ct
+    except Exception:
+        return False
 
 
 def _build_query(tag: str, headline: str) -> str:
@@ -517,9 +539,9 @@ def _build_query(tag: str, headline: str) -> str:
     if "earthquake" in headline_lower:
         return "earthquake disaster rescue rubble"
     if "ukraine" in headline_lower:
-        return "Ukraine Kyiv city flag"
+        return "Ukraine Kyiv city skyline"
     if "poland" in headline_lower:
-        return "Poland Warsaw city flag"
+        return "Poland Warsaw city skyline"
     if "colombia" in headline_lower:
         return "Colombia Bogota city"
     if "organ donation" in headline_lower:
