@@ -123,98 +123,151 @@ def get_free_model_candidates(api_key: str) -> list[str]:
 
 def build_prompt(date_string: str) -> str:
     return f"""
-Create today's complete HTML newspaper-style news digest for {date_string}.
+You are generating the daily HTML news digest for The Malta Gazette, dated {date_string}.
 
-The digest must focus on the following areas:
+Research the latest available information using web search. Cover:
+1. Maltese local news — politics, courts, environment, health, transport, business, culture.
+2. Maltese courtroom updates — current proceedings, key testimony, verdicts.
+3. European and international news — major stories relevant to Malta and Europe.
+4. Technology and gadgets — AI, cybersecurity, consumer tech, major companies.
+5. Malta 5-day weather forecast — temperatures, conditions, UV index, any advisories.
 
-1. Maltese local news
-   - Give Maltese news prominent coverage.
-   - Include politics, public affairs, business, transport, courts,
-     environment, health, education, culture, and other significant
-     local developments where relevant.
-    
-2. Maltese Courtroom Updates
-   - Give a digest of the current courtroom proceedings.
-   - Include any salient details and highlights that have come out.
+Use reputable, current sources. Do not invent facts, quotes, dates, statistics, or links.
 
-3. European and international news
-   - Include a high-level overview of important European-wide news.
-   - Include major international stories that are relevant to readers
-     in Malta and Europe.
+OUTPUT RULES — follow exactly:
+- Return a complete HTML document starting with <!doctype html> and ending with </html>.
+- Do NOT include a <style> block, any CSS, or Markdown fences.
+- Do NOT include JavaScript, forms, ads, or tracking pixels.
+- Do NOT use fabricated image URLs — omit all <img> tags entirely.
+- Do NOT add any text outside the HTML tags.
 
-4. Technology and gadgets
-   - Include global technology news.
-   - Cover important companies, software, artificial intelligence,
-     cybersecurity, consumer electronics, gadgets, products, and trends.
+Use EXACTLY this HTML structure and class names — copy it precisely:
 
-5. Local Weather Forecast
-   - Include a 5-day weather forecast for Malta.
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Malta Gazette — {date_string}</title>
+</head>
+<body>
+<div class="container">
 
-Research the latest available information using web search. Prefer
-reputable, current sources. Do not invent facts, quotations, images,
-dates, statistics, or links.
-
-Create a polished HTML document using ONLY the following structure and
-CSS class names — do NOT include a <style> block or any inline styles
-other than those listed below:
-
-  <div class="container">
-    <header class="masthead">
-      <p class="masthead-kicker">The Daily Edition</p>
-      <h1>The Malta Gazette</h1>
-      <div class="publication-bar">
-        <span>Vol. …</span><span>{date_string}</span><span>Price: €1.50</span>
-      </div>
-    </header>
-
-    <div class="summary-box">Front-page summary sentence.</div>
-
-    <div class="page-body">
-
-      <div class="lead-story">
-        <div class="lead-text">
-          <span class="story-tag">Category · Tag</span>
-          <h2>Lead headline</h2>
-          <p>Body text…</p>
-          <a href="URL" class="source-link">Further reading: Source →</a>
-        </div>
-      </div>
-
-      <div class="story-grid">
-        <!-- Repeat for each article -->
-        <div class="story-card">
-          <span class="story-tag">Category</span>
-          <h3>Headline</h3>
-          <p>Summary…</p>
-          <a href="URL" class="source-link">Source: Name →</a>
-        </div>
-      </div>
-
+  <header class="masthead">
+    <p class="masthead-kicker">The Daily Edition</p>
+    <h1>The Malta Gazette</h1>
+    <div class="publication-bar">
+      <span>Vol. CXXIV</span>
+      <span>[DAY, DD MONTH YYYY]</span>
+      <span>Malta &amp; International Edition</span>
     </div>
+  </header>
+
+  <div class="summary-box">
+    [One or two sentence front-page summary of the day's biggest stories.]
   </div>
 
-Allowed inline styles (only for the weather forecast table rows and
-cells): style="padding:0.4rem 0.6rem;" and
-style="border-bottom:1px solid var(--line);"
+  <div class="page-body">
 
-The page must:
-- Include at least 9 story cards in .story-grid covering all 5 topic areas.
-- Include a weather forecast as the last .story-card using a plain <table>
-  with inline padding styles only.
-- Use <span class="story-tag"> labels such as "Malta Local", "Courts",
-  "Europe", "International", "Technology", "Weather".
-- Have a "Further reading" or "Source" link (class="source-link") for
-  every article.
+    <div class="lead-story">
+      <div class="lead-text">
+        <span class="story-tag">[Category] · [Tag]</span>
+        <h2>[Lead story headline]</h2>
+        <p>[Dateline and body paragraph 1]</p>
+        <p>[Body paragraph 2]</p>
+        <a href="[URL]" class="source-link">Further reading: [Source name] →</a>
+      </div>
+    </div>
 
-Use only valid HTML. Return the complete HTML document, beginning with
-<!doctype html> and ending with </html>.
+    <div class="section-heading">
+      <span class="section-heading-label">🇲🇹 Maltese Local News</span>
+    </div>
+    <div class="story-grid">
+      <div class="story-card">
+        <span class="story-tag">Malta Local</span>
+        <h3>[Headline]</h3>
+        <p>[Summary]</p>
+        <a href="[URL]" class="source-link">Source: [Name] →</a>
+      </div>
+      [2 or more additional .story-card divs for Maltese local stories]
+    </div>
 
-Do not return Markdown fences.
-Do not include a <style> block or any CSS.
-Do not discuss how you generated the page.
-Do not include JavaScript.
-Do not include forms, tracking pixels, advertisements, or affiliate links.
-Do not use fabricated image URLs. Omit images entirely.
+    <div class="section-heading">
+      <span class="section-heading-label">⚖️ Courtroom Updates</span>
+    </div>
+    <div class="story-grid">
+      <div class="story-card">
+        <span class="story-tag">Courts</span>
+        <h3>[Headline]</h3>
+        <p>[Summary]</p>
+        <a href="[URL]" class="source-link">Source: [Name] →</a>
+      </div>
+      [1 or more additional .story-card divs for court stories]
+    </div>
+
+    <div class="section-heading">
+      <span class="section-heading-label">🌍 European &amp; International News</span>
+    </div>
+    <div class="story-grid">
+      <div class="story-card">
+        <span class="story-tag">Europe</span>
+        <h3>[Headline]</h3>
+        <p>[Summary]</p>
+        <a href="[URL]" class="source-link">Source: [Name] →</a>
+      </div>
+      [2 or more additional .story-card divs for international stories]
+    </div>
+
+    <div class="section-heading">
+      <span class="section-heading-label">💻 Technology &amp; Gadgets</span>
+    </div>
+    <div class="story-grid">
+      <div class="story-card">
+        <span class="story-tag">Technology</span>
+        <h3>[Headline]</h3>
+        <p>[Summary]</p>
+        <a href="[URL]" class="source-link">Source: [Name] →</a>
+      </div>
+      [2 or more additional .story-card divs for tech stories]
+    </div>
+
+    <div class="section-heading">
+      <span class="section-heading-label">☀️ Malta Weather Forecast</span>
+    </div>
+    <div class="weather-card">
+      <div class="weather-card-hero">
+        <div class="weather-hero-left">
+          <div class="weather-hero-icon">[TODAY EMOJI e.g. ☀️]</div>
+          <div>
+            <div class="weather-hero-temp">[TODAY HIGH e.g. 33°C]</div>
+            <div class="weather-hero-label">Valletta, Malta</div>
+            <div class="weather-hero-desc">[Condition] — UV Index: [level]</div>
+          </div>
+        </div>
+        <div class="weather-hero-alert">
+          [EMOJI] <strong>[Advisory headline if any, else "Clear Conditions"]</strong><br>
+          [One sentence advisory or general forecast note.]
+        </div>
+      </div>
+      <div class="weather-days">
+        <div class="weather-day">
+          <span class="weather-day-name">[Mon]</span>
+          <span class="weather-day-icon">[☀️]</span>
+          <span class="weather-day-date">[DD Mon]</span>
+          <span class="weather-day-hi">[33°]</span>
+          <span class="weather-day-lo">[26°]</span>
+        </div>
+        [4 more .weather-day divs, one per day of the 5-day forecast]
+      </div>
+      <p class="weather-source">Source: Malta International Airport Met Office.</p>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+
+Replace every [placeholder] with real researched content. Do not output the bracket placeholders.
 """.strip()
 
 def call_gemini(prompt: str, model: str) -> str:
