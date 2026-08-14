@@ -147,16 +147,14 @@ The digest must focus on the following areas:
    - Cover important companies, software, artificial intelligence,
      cybersecurity, consumer electronics, gadgets, products, and trends.
 
-5. Space
-   - Include significant spaceflight, astronomy, NASA, ESA, launch,
-     satellite, and space science news.
+5. Local Weather Forecast 
+- Include a 5-day weather forecast for Malta.
 
 Research the latest available information using web search. Prefer
 reputable, current sources. Do not invent facts, quotations, images,
 dates, statistics, or links.
 
-Create a polished, self-contained HTML document styled like a traditional
-newspaper. Use inline CSS only; do not require a separate stylesheet.
+Create a polished, self-contained HTML document.
 
 The page should include:
 
@@ -170,8 +168,7 @@ The page should include:
 - Appropriate images where reliable direct image URLs are available.
 - Alt text for every image.
 - Captions for images where appropriate.
-- A "Further reading" link for each article.
-- A small footer explaining that links point to the original sources.
+- A "Further reading" link for each article.
 
 Use only valid HTML. Return the complete HTML document, beginning with
 <!doctype html> and ending with </html>.
