@@ -3,365 +3,101 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Newzin Daily digest — Malta, Europe, international, tech, gadgets and space news in one clean edition.">
-  <title>Newzin Daily — Today's Edition</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="description" content="Daily Maltese, European, international, technology, gadget, and space news digest">
+  <title>Daily News Digest</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="page-shell">
-    <header class="top-ribbon">
-      <div class="ribbon-brand">
-        <img class="logo-mark" src="assets/images/Logo_minimal.png" alt="Newzin Daily logo">
-        <div class="logo-copy">
-          <p class="kicker">The Original Edition</p>
-          <h1>Newzin Daily</h1>
-          <p class="logo-tagline">Malta · Europe · International · Tech · Space</p>
-        </div>
+  <div class="top-ribbon">
+    <div class="ribbon-brand">
+      <span class="logo-mark">DND</span>
+      <div class="logo-copy">
+        <p class="kicker">The Daily Edition</p>
+        <h1>Daily News Digest</h1>
+        <p>Malta · Europe · World · Technology · Space</p>
       </div>
-
-      <div class="ribbon-actions">
-        <div class="ribbon-weather" aria-label="Weather widget">
-          <span class="weather-icon">☀️</span>
-          <div>
-            <strong>Valletta</strong>
-            <small>24°C · Partly cloudy</small>
-          </div>
-        </div>
-
-        <div class="ribbon-controls">
-          <label for="edition">Edition</label>
-          <select id="edition" aria-label="Choose a news edition">
-            <option value="news_archive/daily-2026-08-10.html">Monday, 10 August 2026</option>
-            <option value="news_archive/daily-2026-08-07.html">Friday, 07 August 2026</option>
-          </select>
-        </div>
-      </div>
-    </header>
-
-    <main class="news-layout">
-      <section class="section-panel digest-panel" id="today-digest">
-        <div class="section-heading">
-          <p class="section-eyebrow">Today’s digest</p>
-          <h2>Quick analysis of the most important stories</h2>
-          <p class="section-copy">A concise, mobile-friendly snapshot of the day’s top local, European and technology stories.</p>
-        </div>
-        <div class="digest-grid">
-          <div class="digest-summary-card" id="digest-summary"></div>
-          <div class="digest-feature-card" id="digest-feature"></div>
-        </div>
-      </section>
-
-      <section class="section-panel local-panel" id="local-news">
-        <div class="section-heading">
-          <p class="section-eyebrow">Local news</p>
-          <h2>Main developments and the top local headlines</h2>
-        </div>
-        <div id="local-main"></div>
-        <div class="headline-list" id="local-list"></div>
-      </section>
-
-      <section class="section-panel courtroom-panel" id="courtroom-news">
-        <div class="section-heading">
-          <p class="section-eyebrow">Local courtroom</p>
-          <h2>Salient highlights from the most important court cases</h2>
-        </div>
-        <div class="news-grid compact-grid" id="courtroom-list"></div>
-      </section>
-
-      <section class="section-panel europe-panel" id="europe-news">
-        <div class="section-heading">
-          <p class="section-eyebrow">European & international</p>
-          <h2>Top stories across Europe and beyond</h2>
-        </div>
-        <div class="news-grid" id="europe-list"></div>
-      </section>
-
-      <section class="section-panel tech-panel" id="tech-news">
-        <div class="section-heading">
-          <p class="section-eyebrow">Tech, gadgets & space</p>
-          <h2>Technology and space stories to watch</h2>
-        </div>
-        <div class="news-grid" id="tech-list"></div>
-      </section>
-    </main>
-
-    <footer class="page-footer">
-      Simple, fast and focused: all links are sourced from the original edition.
-    </footer>
+    </div>
+    <div class="ribbon-controls">
+      <label for="edition">Edition</label>
+      <select id="edition" aria-label="Choose a news edition">
+        <option value="news_archive/daily-2026-08-14.html">Friday, 14 August 2026</option>
+        <option value="news_archive/daily-2026-08-11.html">Tuesday, 11 August 2026</option>
+        <option value="news_archive/daily-2026-08-10.html">Monday, 10 August 2026</option>
+        <option value="news_archive/daily-2026-08-07.html">Friday, 07 August 2026</option>
+      </select>
+    </div>
   </div>
 
+  <div class="page-shell">
+    <main class="content-card">
+      <div class="digest-content" id="digest-content" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <footer>
+    News links lead to the original publishers and sources.
+  </footer>
+
   <script>
-    const editionSelect = document.getElementById('edition');
-    const digestSummary = document.getElementById('digest-summary');
-    const digestFeature = document.getElementById('digest-feature');
-    const localMain = document.getElementById('local-main');
-    const localList = document.getElementById('local-list');
-    const courtroomList = document.getElementById('courtroom-list');
-    const europeList = document.getElementById('europe-list');
-    const techList = document.getElementById('tech-list');
+    const selector = document.getElementById("edition");
+    const digestContent = document.getElementById("digest-content");
 
-    const courtKeywords = /\b(court|trial|jury|juror|verdict|ruling|legal|case|prosecut|convict|hearing|investigation|harassment|drug)\b/i;
-
-    function text(node) {
-      return node?.textContent?.trim() || '';
-    }
-
-    function parseArticle(article) {
-      const title = text(article.querySelector('h3'));
-      const excerpt = text(article.querySelector('p'));
-      const linkElement = article.querySelector('a');
-      // prefer article image, else try to find the first image in the surrounding section
-      let imageElement = article.querySelector('img');
-      if (!imageElement) {
-        const section = article.closest('section');
-        imageElement = section?.querySelector('img');
-      }
-      const rawUrl = imageElement ? imageElement.src : '';
-      return {
-        title,
-        excerpt,
-        link: linkElement ? linkElement.href || '#' : '#',
-        image: normalizeImageUrl(rawUrl),
-        caption: text(article.querySelector('figcaption'))
-      };
-    }
-
-    function parseLead(doc) {
-      const lead = doc.querySelector('.lead-story');
-      if (!lead) return null;
-      const title = text(lead.querySelector('h2'));
-      const paragraphs = Array.from(lead.querySelectorAll('p')).map(text).filter(Boolean);
-      const excerpt = paragraphs[1] || paragraphs[0] || '';
-      const summary = paragraphs.slice(-2).join(' ');
-      const imageElement = lead.querySelector('img');
-      const linkElement = lead.querySelector('a');
-      return {
-        title,
-        excerpt,
-        summary,
-        image: imageElement ? normalizeImageUrl(imageElement.src) : '',
-        caption: text(lead.querySelector('figcaption')),
-        link: linkElement ? linkElement.href || '#' : '#'
-      };
-    }
-
-    // Attempt to prefer higher-quality Unsplash images and preserve other sources
-    function normalizeImageUrl(url) {
-      if (!url) return '';
-      try {
-        const u = new URL(url);
-        if (u.hostname.endsWith('unsplash.com')) {
-          // Increase width and quality when possible
-          const params = u.searchParams;
-          params.set('w', '1600');
-          params.set('q', '90');
-          u.search = params.toString();
-          return u.toString();
-        }
-      } catch (e) {
-        // ignore malformed URLs
-      }
-      return url;
-    }
-
-    function classifyArticles(heading, articles) {
-      if (/local/i.test(heading)) {
-        return { type: 'local', articles };
-      }
-      if (/europe|international/i.test(heading)) {
-        return { type: 'europe', articles };
-      }
-      if (/technology|space/i.test(heading)) {
-        return { type: 'tech', articles };
-      }
-      return { type: 'other', articles };
-    }
-
-    function isCourtItem(item) {
-      return courtKeywords.test(item.title + ' ' + item.excerpt);
-    }
-
-    function sectionFromDocument(doc) {
-      const summaryText = text(doc.querySelector('.summary-box'));
-      const leadStory = parseLead(doc);
-      const buckets = { local: [], courtroom: [], europe: [], tech: [] };
-      const sections = Array.from(doc.querySelectorAll('section')).filter((section) => !section.classList.contains('lead-story'));
-
-      sections.forEach((section) => {
-        const heading = text(section.querySelector('.section-header'));
-        const articles = Array.from(section.querySelectorAll('.article')).map(parseArticle);
-        const classification = classifyArticles(heading, articles);
-
-        if (classification.type === 'local') {
-          classification.articles.forEach((item) => {
-            if (isCourtItem(item)) {
-              buckets.courtroom.push(item);
-            } else {
-              buckets.local.push(item);
-            }
-          });
-          return;
-        }
-        if (classification.type === 'europe') {
-          buckets.europe.push(...classification.articles);
-          return;
-        }
-        if (classification.type === 'tech') {
-          buckets.tech.push(...classification.articles);
-          return;
-        }
-
-        classification.articles.forEach((item) => {
-          if (isCourtItem(item)) {
-            buckets.courtroom.push(item);
-          } else {
-            buckets.local.push(item);
-          }
-        });
-      });
-
-      return { summaryText, leadStory, ...buckets };
-    }
-
-    function renderCard(item, large = false) {
-      return `
-        <article class="news-card ${large ? 'news-card-large' : 'news-card-small'}">
-          ${item.image ? `
-            <figure class="card-media">
-              <img src="${item.image}" alt="${item.caption || item.title}">
-              ${item.caption ? `<figcaption>${item.caption}</figcaption>` : ''}
-            </figure>` : ''}
-          <div class="card-copy">
-            <h3>${item.title}</h3>
-            <p>${item.excerpt}</p>
-            <a href="${item.link}" target="_blank" rel="noopener">Read more</a>
-          </div>
-        </article>
-      `;
-    }
-
-    function renderLocalSection(localItems, leadStory) {
-      const localCopy = [...localItems];
-      const mainItem = localCopy.shift() || (leadStory && !isCourtItem(leadStory) ? {
-        title: leadStory.title,
-        excerpt: leadStory.excerpt,
-        image: leadStory.image,
-        caption: leadStory.caption,
-        link: leadStory.link
-      } : null);
-
-      localMain.innerHTML = mainItem
-        ? `<div class="feature-card">${renderCard(mainItem, true)}</div>`
-        : `<div class="empty-state">No local headlines available for this edition.</div>`;
-
-      localList.innerHTML = localCopy.length
-        ? localCopy.slice(0, 5).map((item) => `
-            <article class="mini-card">
-              <h4>${item.title}</h4>
-              <p>${item.excerpt}</p>
-              <a href="${item.link}" target="_blank" rel="noopener">Read more</a>
-            </article>
-          `).join('')
-        : `<div class="empty-state">No additional local headlines found.</div>`;
-    }
-
-    function renderSection(listNode, items) {
-      listNode.innerHTML = items.length
-        ? items.slice(0, 6).map((item) => renderCard(item)).join('')
-        : `<div class="empty-state">No stories available in this section.</div>`;
-    }
-
-    function renderCourtroom(items) {
-      courtroomList.innerHTML = items.length
-        ? items.slice(0, 6).map((item) => `
-            <article class="court-card">
-              <div class="court-copy">
-                <h3>${item.title}</h3>
-                <p>${item.excerpt}</p>
-                <a href="${item.link}" target="_blank" rel="noopener">Read more</a>
-              </div>
-            </article>
-          `).join('')
-        : `<div class="empty-state">No courtroom highlights found for this edition.</div>`;
-    }
-
-    function renderDigest(summaryText, leadStory) {
-      digestSummary.innerHTML = `
-        <div class="summary-block">
-          <p class="summary-label">Edition snapshot</p>
-          <p>${summaryText || 'A careful digest of the day’s leading developments.'}</p>
-        </div>
-      `;
-
-      digestFeature.innerHTML = leadStory
-        ? `<article class="feature-card feature-large">
-             <div class="card-copy">
-               <p class="summary-label">Lead analysis</p>
-               <h3>${leadStory.title}</h3>
-               <p>${leadStory.excerpt}</p>
-               <p class="feature-note">${leadStory.summary}</p>
-               <a href="${leadStory.link}" target="_blank" rel="noopener">Read more</a>
-             </div>
-             ${leadStory.image ? `
-               <figure class="card-media">
-                 <img src="${leadStory.image}" alt="${leadStory.caption || leadStory.title}">
-                 ${leadStory.caption ? `<figcaption>${leadStory.caption}</figcaption>` : ''}
-               </figure>` : ''}
-           </article>`
-        : `<div class="empty-state">No lead story available for this edition.</div>`;
+    function formatEditionLabel(file) {
+      return file
+        .split("/")
+        .pop()
+        .replace("daily-", "")
+        .replace(".html", "");
     }
 
     function renderEdition(file) {
-      const loadingHtml = '<div class="loading">Loading edition…</div>';
-      digestSummary.innerHTML = loadingHtml;
-      digestFeature.innerHTML = '';
-      localMain.innerHTML = loadingHtml;
-      localList.innerHTML = loadingHtml;
-      courtroomList.innerHTML = loadingHtml;
-      europeList.innerHTML = loadingHtml;
-      techList.innerHTML = loadingHtml;
+      digestContent.innerHTML = '<p class="edition-date">Loading edition…</p>';
 
       fetch(file)
         .then((response) => {
-          if (!response.ok) throw new Error('Unable to load edition');
+          if (!response.ok) {
+            throw new Error("Unable to load edition");
+          }
           return response.text();
         })
         .then((html) => {
-          const doc = new DOMParser().parseFromString(html, 'text/html');
-          const parsed = sectionFromDocument(doc);
-          renderDigest(parsed.summaryText, parsed.leadStory);
-          renderLocalSection(parsed.local, parsed.leadStory);
-          renderCourtroom(parsed.courtroom);
-          renderSection(europeList, parsed.europe);
-          renderSection(techList, parsed.tech);
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const container = doc.querySelector(".container");
+
+          digestContent.innerHTML = "";
+
+          if (container) {
+            const clonedContainer = container.cloneNode(true);
+            clonedContainer.querySelector(".masthead")?.remove();
+            digestContent.appendChild(clonedContainer);
+          } else {
+            const fallback = document.createElement("div");
+            fallback.className = "digest-simple";
+            fallback.innerHTML = (doc.body?.innerHTML || html).trim() || "<p>The selected edition could not be rendered.</p>";
+            digestContent.appendChild(fallback);
+          }
+
+          history.replaceState(null, "", "#" + file);
+          digestContent.insertAdjacentHTML(
+            "afterbegin",
+            `<p class="edition-date">Edition: ${formatEditionLabel(file)}</p>`
+          );
         })
         .catch(() => {
-          const fallback = '<div class="empty-state">The selected edition could not be loaded.</div>';
-          digestSummary.innerHTML = fallback;
-          digestFeature.innerHTML = '';
-          localMain.innerHTML = fallback;
-          localList.innerHTML = fallback;
-          courtroomList.innerHTML = fallback;
-          europeList.innerHTML = fallback;
-          techList.innerHTML = fallback;
+          digestContent.innerHTML = '<p class="edition-date">The selected edition could not be loaded.</p>';
         });
     }
 
-    editionSelect.addEventListener('change', () => {
-      const file = editionSelect.value;
-      renderEdition(file);
-      history.replaceState(null, '', '#' + encodeURIComponent(file));
+    selector.addEventListener("change", function () {
+      renderEdition(selector.value);
     });
 
-    const persistedFile = decodeURIComponent(location.hash.slice(1));
-    if ([...editionSelect.options].some((option) => option.value === persistedFile)) {
-      editionSelect.value = persistedFile;
+    const hashFile = decodeURIComponent(location.hash.slice(1));
+    if (hashFile && [...selector.options].some((option) => option.value === hashFile)) {
+      selector.value = hashFile;
     }
 
-    renderEdition(editionSelect.value);
+    renderEdition(selector.value);
   </script>
 </body>
 </html>
