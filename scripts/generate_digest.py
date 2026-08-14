@@ -421,97 +421,221 @@ def clean_generated_html(document: str) -> str:
 
     return document.strip() + "\n"
 
-# Maps story-tag text (lowercase) keywords to Unsplash topic photo IDs.
-# Each list entry is a stable Unsplash photo ID that will never 404.
-_TAG_IMAGES: dict[str, list[str]] = {
-    "malta":       ["photo-1533152274846-6b5b1a8a7e1b", "photo-1602081112809-1ffe09a6b570", "photo-1548199569-2c6a8c35e8e4"],
-    "local":       ["photo-1533152274846-6b5b1a8a7e1b", "photo-1602081112809-1ffe09a6b570", "photo-1548199569-2c6a8c35e8e4"],
-    "courts":      ["photo-1589994965851-a8f479c573a9", "photo-1559827260-dc66d52bef19", "photo-1620158169220-12e19e3d08b6"],
-    "court":       ["photo-1589994965851-a8f479c573a9", "photo-1559827260-dc66d52bef19", "photo-1620158169220-12e19e3d08b6"],
-    "europe":      ["photo-1467269204594-9661b134dd2b", "photo-1519677100203-a0e668c92439", "photo-1541343672885-9be56236302a"],
-    "international": ["photo-1451187580459-43490279c0fa", "photo-1529400971008-f566de0e6dfc", "photo-1488646953014-85cb44e25828"],
-    "world":       ["photo-1451187580459-43490279c0fa", "photo-1529400971008-f566de0e6dfc", "photo-1488646953014-85cb44e25828"],
-    "technology":  ["photo-1518770660439-4636190af475", "photo-1488590528505-98d2b5aba04b", "photo-1517433456452-f9633a875f6f"],
-    "tech":        ["photo-1518770660439-4636190af475", "photo-1488590528505-98d2b5aba04b", "photo-1517433456452-f9633a875f6f"],
-    "ai":          ["photo-1677442135703-1787eea5ce01", "photo-1620712943543-bcc4688e7485", "photo-1531746790731-6c087fecd65a"],
-    "cybersecurity": ["photo-1550751827-4bd374173345", "photo-1563013544-824ae1b704d3", "photo-1510511459019-5dda7724fd87"],
-    "gadgets":     ["photo-1519389950473-47ba0277781c", "photo-1498049794561-7780e7231661", "photo-1550009158-9ebf69173e03"],
-    "environment": ["photo-1441974231531-c6227db76b6e", "photo-1500534314209-a25ddb2bd429", "photo-1518531933037-91b2f5f229cc"],
-    "infrastructure": ["photo-1486325212027-8081e485255e", "photo-1504307651254-35680f356dfd", "photo-1590736969955-71cc94901144"],
-    "business":    ["photo-1507679799987-c73779587ccf", "photo-1454165804606-c3d57bc86b40", "photo-1460925895917-afdab827c52f"],
-    "health":      ["photo-1576091160399-112ba8d25d1d", "photo-1505751172876-fa1923c5c528", "photo-1532938911079-1b06ac7ceec7"],
-    "transport":   ["photo-1544620347-c4fd4a3d5957", "photo-1464219789935-c2d9d9aba644", "photo-1530789253388-582c481c54b0"],
-    "politics":    ["photo-1529107386315-e1a2ed48a620", "photo-1555848962-6e79363ec58f", "photo-1519501025264-65ba15a82390"],
-    "breaking":    ["photo-1504711434969-e33886168f5c", "photo-1586339949916-3e9457bef6d3", "photo-1495020689067-958852a7765e"],
-    "weather":     ["photo-1504608524841-42584120d693", "photo-1534088568595-a066f410bcda", "photo-1561484930-998b6a7b22e8"],
+# ---------------------------------------------------------------------------
+# Image injection — Wikimedia Commons live search
+# ---------------------------------------------------------------------------
+
+# Skip file types that won't render as photos in a browser.
+_SKIP_EXTENSIONS = {".svg", ".pdf", ".ogg", ".webm", ".mp4", ".ogv", ".tif", ".tiff"}
+
+def _commons_search(query: str, width: int = 800) -> str | None:
+    """
+    Search Wikimedia Commons for a photo matching *query* and return a
+    thumbnail URL, or None if nothing suitable is found.
+    """
+    params = urllib.parse.urlencode({
+        "action": "query",
+        "generator": "search",
+        "gsrsearch": query,
+        "gsrnamespace": 6,          # File: namespace only
+        "gsrlimit": 10,
+        "prop": "imageinfo",
+        "iiprop": "url|mediatype|mime",
+        "iiurlwidth": width,
+        "format": "json",
+    })
+    url = f"https://commons.wikimedia.org/w/api.php?{params}"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "DailyGazette/1.0 (https://github.com/robertcassar18/daily-gazette)"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return None
+
+    pages = data.get("query", {}).get("pages", {})
+    for page in pages.values():
+        title = page.get("title", "")
+        ext = "." + title.rsplit(".", 1)[-1].lower() if "." in title else ""
+        if ext in _SKIP_EXTENSIONS:
+            continue
+        info_list = page.get("imageinfo", [])
+        if not info_list:
+            continue
+        info = info_list[0]
+        mime = info.get("mime", "")
+        if not mime.startswith("image/"):
+            continue
+        # Skip SVG even if MIME says image
+        if "svg" in mime or "svg" in title.lower():
+            continue
+        thumb = info.get("thumburl", "")
+        if thumb:
+            return thumb
+    return None
+
+
+def _build_query(tag: str, headline: str) -> str:
+    """
+    Build a Wikimedia Commons search query from the story tag and headline.
+    Extracts the most meaningful nouns (capitalised words, proper nouns,
+    country/topic names) and combines them with the tag for specificity.
+    """
+    # Strip markup-style separators from tags like "Breaking · Courts"
+    tag_clean = re.sub(r"\s*[·|—]\s*", " ", tag).strip()
+
+    # Pull capitalised words from the headline (likely nouns/proper names)
+    proper = re.findall(r"\b([A-Z][a-z]{2,})\b", headline)
+    # Drop very common words that add no search value
+    stop = {"The", "For", "New", "And", "After", "Over", "With", "From", "Into",
+            "Amid", "That", "This", "Has", "Its", "Are", "Was", "Were", "By",
+            "Amid", "Amid", "Faces", "Surpasses", "Launches", "Unveils",
+            "Raises", "Approved", "Announced", "Charged", "Walks", "Free",
+            "Thwarts", "Imposes", "Reporting", "High", "Profile"}
+    keywords = [w for w in proper if w not in stop][:4]
+
+    # Also pull the first significant lowercase noun phrase (e.g. "fishing", "earthquake")
+    subject_words = re.findall(
+        r"\b(fishing|earthquake|nuclear|heatwave|desalination|organ|donation|"
+        r"cybersecurity|instagram|parliament|migration|flooding|drought|"
+        r"hospital|transport|airport|railway|solar|energy|missile|military|"
+        r"sanctions|summit|vaccine|inflation|budget|election|protest|fire|flood)\b",
+        headline, re.IGNORECASE
+    )
+    keywords += [w.capitalize() for w in subject_words[:2]]
+
+    # Specific overrides for topics where generic queries work better
+    headline_lower = headline.lower()
+    if "fishing" in headline_lower or "fishermen" in headline_lower:
+        return "Malta fishing boat harbour"
+    if "instagram" in headline_lower:
+        return "smartphone social media app icon"
+    if "desalination" in headline_lower or "water" in headline_lower and "plant" in headline_lower:
+        return "desalination water plant sea"
+    if "earthquake" in headline_lower:
+        return "earthquake disaster rescue rubble"
+    if "ukraine" in headline_lower:
+        return "Ukraine Kyiv city flag"
+    if "poland" in headline_lower:
+        return "Poland Warsaw city flag"
+    if "colombia" in headline_lower:
+        return "Colombia Bogota city"
+    if "organ donation" in headline_lower:
+        return "hospital medicine healthcare Malta"
+
+    parts = [tag_clean] + keywords
+    return " ".join(dict.fromkeys(parts))  # preserve order, deduplicate
+
+
+# Fallback queries used when the Commons search returns nothing useful,
+# indexed by tag keyword (lowercase match).
+_FALLBACK_QUERIES: dict[str, str] = {
+    "malta":          "Malta Valletta aerial",
+    "local":          "Malta Valletta",
+    "courts":         "Malta Valletta Courts Justice building",
+    "court":          "Malta Valletta Courts Justice building",
+    "europe":         "European Union parliament Brussels building",
+    "international":  "United Nations headquarters New York aerial",
+    "world":          "world globe earth",
+    "technology":     "computer technology laptop screen",
+    "tech":           "technology circuit board computer",
+    "ai":             "artificial intelligence robot",
+    "cybersecurity":  "cybersecurity network security padlock",
+    "gadgets":        "consumer electronics gadgets smartphone",
+    "environment":    "nature environment forest green",
+    "infrastructure": "construction infrastructure bridge crane",
+    "business":       "business finance office meeting",
+    "fishing":        "Malta fishing boat harbour",
+    "health":         "hospital medicine healthcare doctor",
+    "transport":      "Malta bus transport road",
+    "politics":       "parliament politics government",
+    "breaking":       "news journalism press camera",
+    "weather":        "Malta sunshine blue sky Mediterranean",
+    "earthquake":     "earthquake disaster rubble rescue",
+    "military":       "military army soldiers",
+    "energy":         "energy power plant electricity",
+    "social media":   "smartphone mobile app screen",
 }
 
-_LEAD_IMAGES: list[str] = [
-    "photo-1504711434969-e33886168f5c",
-    "photo-1495020689067-958852a7765e",
-    "photo-1586339949916-3e9457bef6d3",
-    "photo-1504608524841-42584120d693",
-    "photo-1467269204594-9661b134dd2b",
-]
-
-def _unsplash_url(photo_id: str, width: int = 800) -> str:
-    return f"https://images.unsplash.com/{photo_id}?auto=format&fit=crop&w={width}&q=75"
-
-def _image_for_tag(tag_text: str, index: int = 0) -> str:
-    """Return an Unsplash image URL matched to the story tag text."""
-    tag_lower = tag_text.lower()
-    for key, ids in _TAG_IMAGES.items():
+def _fallback_query(tag: str) -> str:
+    tag_lower = tag.lower()
+    for key, query in _FALLBACK_QUERIES.items():
         if key in tag_lower:
-            return _unsplash_url(ids[index % len(ids)])
-    # Fallback: generic news image
-    return _unsplash_url(_LEAD_IMAGES[index % len(_LEAD_IMAGES)])
+            return query
+    return "Malta news Valletta"
+
 
 def inject_images(document: str) -> str:
     """
-    Insert a cover image into every .story-card and add a feature image
-    to the .lead-story. Images come from Unsplash using stable photo IDs
-    matched to each card's story-tag text, so no URLs are fabricated.
+    Insert a contextually relevant image into every .story-card and into
+    the .lead-story by searching Wikimedia Commons with a query built from
+    each card's story-tag and headline text. Falls back to a tag-based
+    generic query if the specific search returns nothing.
     """
-    # Add feature image to lead story (insert before </div> that closes .lead-text)
-    lead_img = (
-        f'\n      <figure class="feature-image">'
-        f'<img src="{_unsplash_url(_LEAD_IMAGES[0], 900)}" '
-        f'alt="Lead story illustration" loading="lazy"></figure>'
+    # ── Lead story feature image ──────────────────────────────────────────
+    lead_tag_m = re.search(
+        r'class="lead-story".*?class="story-tag"[^>]*>([^<]+)<.*?<h2[^>]*>([^<]+)<',
+        document, re.IGNORECASE | re.DOTALL,
     )
-    document = re.sub(
-        r'(<div class="lead-story">)',
-        r'\1' + lead_img,
-        document,
-        count=1,
-        flags=re.IGNORECASE,
-    )
+    if lead_tag_m:
+        lead_tag = lead_tag_m.group(1).strip()
+        lead_headline = lead_tag_m.group(2).strip()
+        lead_query = _build_query(lead_tag, lead_headline)
+        lead_url = _commons_search(lead_query, width=900)
+        if not lead_url:
+            lead_url = _commons_search(_fallback_query(lead_tag), width=900)
+    else:
+        lead_url = _commons_search("Malta Valletta news", width=900)
 
-    # For each story-card, extract its story-tag text and prepend a matching image
-    card_counter = [0]
+    if lead_url:
+        lead_img = (
+            f'\n      <figure class="feature-image">'
+            f'<img src="{html.escape(lead_url)}" '
+            f'alt="Lead story illustration" loading="lazy"></figure>'
+        )
+        document = re.sub(
+            r'(<div class="lead-story">)',
+            r'\1' + lead_img,
+            document, count=1, flags=re.IGNORECASE,
+        )
 
+    # ── Story card images ─────────────────────────────────────────────────
     def replace_card(match: re.Match) -> str:
         card_html = match.group(0)
-        # Find the story-tag text inside this card
-        tag_match = re.search(
-            r'class="story-tag"[^>]*>([^<]+)<',
-            card_html,
-            flags=re.IGNORECASE,
+        tag_m = re.search(
+            r'class="story-tag"[^>]*>([^<]+)<', card_html, re.IGNORECASE
         )
-        tag_text = tag_match.group(1).strip() if tag_match else ""
-        idx = card_counter[0]
-        card_counter[0] += 1
-        img_url = _image_for_tag(tag_text, idx)
+        h3_m = re.search(
+            r'<h3[^>]*>([^<]+)<', card_html, re.IGNORECASE
+        )
+        tag_text = tag_m.group(1).strip() if tag_m else ""
+        headline_text = h3_m.group(1).strip() if h3_m else ""
+
+        # Try three progressively broader queries
+        queries = [
+            _build_query(tag_text, headline_text),
+            _fallback_query(tag_text),
+            _fallback_query(tag_text).split()[0] + " photo",
+        ]
+        img_url = None
+        for q in queries:
+            img_url = _commons_search(q)
+            if img_url:
+                break
+        if not img_url:
+            return card_html  # No image rather than a broken one
+
         img_tag = (
-            f'<img src="{img_url}" '
-            f'alt="{html.escape(tag_text)} illustration" loading="lazy">\n        '
+            f'<img src="{html.escape(img_url)}" '
+            f'alt="{html.escape(tag_text)}: {html.escape(headline_text[:60])}" '
+            f'loading="lazy">\n        '
         )
-        # Insert image at the very start of the card's inner content
         return re.sub(
             r'(<div class="story-card">)\s*',
             r'\1\n        ' + img_tag,
-            card_html,
-            count=1,
-            flags=re.IGNORECASE,
+            card_html, count=1, flags=re.IGNORECASE,
         )
 
     document = re.sub(
