@@ -280,6 +280,21 @@ def clean_generated_html(document: str) -> str:
     )
     document = re.sub(r"\s*```\s*$", "", document)
 
+    # Gemini sometimes prefixes the response with its reasoning/thinking
+    # notes before the actual document, and may add stray text after the
+    # closing </html> tag. The reasoning text may itself mention HTML tags
+    # (e.g. inside backticks), so find the *last* doctype/html occurrence,
+    # which marks the start of the real document.
+    doctype_matches = list(re.finditer(r"<!doctype\s+html", document, flags=re.IGNORECASE))
+    html_matches = list(re.finditer(r"<html\b", document, flags=re.IGNORECASE))
+    start_candidates = [m.start() for m in (doctype_matches[-1:] or []) + (html_matches[-1:] or [])]
+    if start_candidates:
+        document = document[min(start_candidates):]
+
+    end_matches = list(re.finditer(r"</html\s*>", document, flags=re.IGNORECASE))
+    if end_matches:
+        document = document[: end_matches[-1].end()]
+
     # Remove script, iframe, object, embed, and form elements.
     document = re.sub(
         r"<(script|iframe|object|embed|form)\b[^>]*>.*?</\1\s*>",
