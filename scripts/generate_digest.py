@@ -421,6 +421,108 @@ def clean_generated_html(document: str) -> str:
 
     return document.strip() + "\n"
 
+# Maps story-tag text (lowercase) keywords to Unsplash topic photo IDs.
+# Each list entry is a stable Unsplash photo ID that will never 404.
+_TAG_IMAGES: dict[str, list[str]] = {
+    "malta":       ["photo-1533152274846-6b5b1a8a7e1b", "photo-1602081112809-1ffe09a6b570", "photo-1548199569-2c6a8c35e8e4"],
+    "local":       ["photo-1533152274846-6b5b1a8a7e1b", "photo-1602081112809-1ffe09a6b570", "photo-1548199569-2c6a8c35e8e4"],
+    "courts":      ["photo-1589994965851-a8f479c573a9", "photo-1559827260-dc66d52bef19", "photo-1620158169220-12e19e3d08b6"],
+    "court":       ["photo-1589994965851-a8f479c573a9", "photo-1559827260-dc66d52bef19", "photo-1620158169220-12e19e3d08b6"],
+    "europe":      ["photo-1467269204594-9661b134dd2b", "photo-1519677100203-a0e668c92439", "photo-1541343672885-9be56236302a"],
+    "international": ["photo-1451187580459-43490279c0fa", "photo-1529400971008-f566de0e6dfc", "photo-1488646953014-85cb44e25828"],
+    "world":       ["photo-1451187580459-43490279c0fa", "photo-1529400971008-f566de0e6dfc", "photo-1488646953014-85cb44e25828"],
+    "technology":  ["photo-1518770660439-4636190af475", "photo-1488590528505-98d2b5aba04b", "photo-1517433456452-f9633a875f6f"],
+    "tech":        ["photo-1518770660439-4636190af475", "photo-1488590528505-98d2b5aba04b", "photo-1517433456452-f9633a875f6f"],
+    "ai":          ["photo-1677442135703-1787eea5ce01", "photo-1620712943543-bcc4688e7485", "photo-1531746790731-6c087fecd65a"],
+    "cybersecurity": ["photo-1550751827-4bd374173345", "photo-1563013544-824ae1b704d3", "photo-1510511459019-5dda7724fd87"],
+    "gadgets":     ["photo-1519389950473-47ba0277781c", "photo-1498049794561-7780e7231661", "photo-1550009158-9ebf69173e03"],
+    "environment": ["photo-1441974231531-c6227db76b6e", "photo-1500534314209-a25ddb2bd429", "photo-1518531933037-91b2f5f229cc"],
+    "infrastructure": ["photo-1486325212027-8081e485255e", "photo-1504307651254-35680f356dfd", "photo-1590736969955-71cc94901144"],
+    "business":    ["photo-1507679799987-c73779587ccf", "photo-1454165804606-c3d57bc86b40", "photo-1460925895917-afdab827c52f"],
+    "health":      ["photo-1576091160399-112ba8d25d1d", "photo-1505751172876-fa1923c5c528", "photo-1532938911079-1b06ac7ceec7"],
+    "transport":   ["photo-1544620347-c4fd4a3d5957", "photo-1464219789935-c2d9d9aba644", "photo-1530789253388-582c481c54b0"],
+    "politics":    ["photo-1529107386315-e1a2ed48a620", "photo-1555848962-6e79363ec58f", "photo-1519501025264-65ba15a82390"],
+    "breaking":    ["photo-1504711434969-e33886168f5c", "photo-1586339949916-3e9457bef6d3", "photo-1495020689067-958852a7765e"],
+    "weather":     ["photo-1504608524841-42584120d693", "photo-1534088568595-a066f410bcda", "photo-1561484930-998b6a7b22e8"],
+}
+
+_LEAD_IMAGES: list[str] = [
+    "photo-1504711434969-e33886168f5c",
+    "photo-1495020689067-958852a7765e",
+    "photo-1586339949916-3e9457bef6d3",
+    "photo-1504608524841-42584120d693",
+    "photo-1467269204594-9661b134dd2b",
+]
+
+def _unsplash_url(photo_id: str, width: int = 800) -> str:
+    return f"https://images.unsplash.com/{photo_id}?auto=format&fit=crop&w={width}&q=75"
+
+def _image_for_tag(tag_text: str, index: int = 0) -> str:
+    """Return an Unsplash image URL matched to the story tag text."""
+    tag_lower = tag_text.lower()
+    for key, ids in _TAG_IMAGES.items():
+        if key in tag_lower:
+            return _unsplash_url(ids[index % len(ids)])
+    # Fallback: generic news image
+    return _unsplash_url(_LEAD_IMAGES[index % len(_LEAD_IMAGES)])
+
+def inject_images(document: str) -> str:
+    """
+    Insert a cover image into every .story-card and add a feature image
+    to the .lead-story. Images come from Unsplash using stable photo IDs
+    matched to each card's story-tag text, so no URLs are fabricated.
+    """
+    # Add feature image to lead story (insert before </div> that closes .lead-text)
+    lead_img = (
+        f'\n      <figure class="feature-image">'
+        f'<img src="{_unsplash_url(_LEAD_IMAGES[0], 900)}" '
+        f'alt="Lead story illustration" loading="lazy"></figure>'
+    )
+    document = re.sub(
+        r'(<div class="lead-story">)',
+        r'\1' + lead_img,
+        document,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+
+    # For each story-card, extract its story-tag text and prepend a matching image
+    card_counter = [0]
+
+    def replace_card(match: re.Match) -> str:
+        card_html = match.group(0)
+        # Find the story-tag text inside this card
+        tag_match = re.search(
+            r'class="story-tag"[^>]*>([^<]+)<',
+            card_html,
+            flags=re.IGNORECASE,
+        )
+        tag_text = tag_match.group(1).strip() if tag_match else ""
+        idx = card_counter[0]
+        card_counter[0] += 1
+        img_url = _image_for_tag(tag_text, idx)
+        img_tag = (
+            f'<img src="{img_url}" '
+            f'alt="{html.escape(tag_text)} illustration" loading="lazy">\n        '
+        )
+        # Insert image at the very start of the card's inner content
+        return re.sub(
+            r'(<div class="story-card">)\s*',
+            r'\1\n        ' + img_tag,
+            card_html,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+
+    document = re.sub(
+        r'<div class="story-card">.*?</div>',
+        replace_card,
+        document,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+
+    return document
+
 def digest_files():
     return sorted(
         ROOT.glob("news_archive/daily-????-??-??.html"),
@@ -595,6 +697,7 @@ def main():
         )
 
     generated_html = clean_generated_html(generated_html)
+    generated_html = inject_images(generated_html)
 
     output_path.write_text(generated_html, encoding="utf-8")
     print(f"Wrote {output_path.name}")
