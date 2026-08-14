@@ -65,7 +65,11 @@
 
           if (container) {
             const clonedContainer = container.cloneNode(true);
+            // Strip the masthead (either .masthead class or a <header> element)
             clonedContainer.querySelector(".masthead")?.remove();
+            clonedContainer.querySelector("header")?.remove();
+            // Strip any embedded <style> blocks so they don't bleed into the host page
+            clonedContainer.querySelectorAll("style").forEach((el) => el.remove());
             digestContent.appendChild(clonedContainer);
           } else {
             const fallback = document.createElement("div");

@@ -147,38 +147,74 @@ The digest must focus on the following areas:
    - Cover important companies, software, artificial intelligence,
      cybersecurity, consumer electronics, gadgets, products, and trends.
 
-5. Local Weather Forecast 
-- Include a 5-day weather forecast for Malta.
+5. Local Weather Forecast
+   - Include a 5-day weather forecast for Malta.
 
 Research the latest available information using web search. Prefer
 reputable, current sources. Do not invent facts, quotations, images,
 dates, statistics, or links.
 
-Create a polished, self-contained HTML document.
+Create a polished HTML document using ONLY the following structure and
+CSS class names — do NOT include a <style> block or any inline styles
+other than those listed below:
 
-The page should include:
+  <div class="container">
+    <header class="masthead">
+      <p class="masthead-kicker">The Daily Edition</p>
+      <h1>The Malta Gazette</h1>
+      <div class="publication-bar">
+        <span>Vol. …</span><span>{date_string}</span><span>Price: €1.50</span>
+      </div>
+    </header>
 
-- A newspaper masthead.
-- The publication date.
-- A short front-page summary.
-- Clearly separated sections.
-- Newspaper-like columns and typography.
-- A prominent lead story.
-- Article headlines, summaries, and source links.
-- Appropriate images where reliable direct image URLs are available.
-- Alt text for every image.
-- Captions for images where appropriate.
-- A "Further reading" link for each article.
+    <div class="summary-box">Front-page summary sentence.</div>
+
+    <div class="page-body">
+
+      <div class="lead-story">
+        <div class="lead-text">
+          <span class="story-tag">Category · Tag</span>
+          <h2>Lead headline</h2>
+          <p>Body text…</p>
+          <a href="URL" class="source-link">Further reading: Source →</a>
+        </div>
+      </div>
+
+      <div class="story-grid">
+        <!-- Repeat for each article -->
+        <div class="story-card">
+          <span class="story-tag">Category</span>
+          <h3>Headline</h3>
+          <p>Summary…</p>
+          <a href="URL" class="source-link">Source: Name →</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+Allowed inline styles (only for the weather forecast table rows and
+cells): style="padding:0.4rem 0.6rem;" and
+style="border-bottom:1px solid var(--line);"
+
+The page must:
+- Include at least 9 story cards in .story-grid covering all 5 topic areas.
+- Include a weather forecast as the last .story-card using a plain <table>
+  with inline padding styles only.
+- Use <span class="story-tag"> labels such as "Malta Local", "Courts",
+  "Europe", "International", "Technology", "Weather".
+- Have a "Further reading" or "Source" link (class="source-link") for
+  every article.
 
 Use only valid HTML. Return the complete HTML document, beginning with
 <!doctype html> and ending with </html>.
 
 Do not return Markdown fences.
+Do not include a <style> block or any CSS.
 Do not discuss how you generated the page.
 Do not include JavaScript.
 Do not include forms, tracking pixels, advertisements, or affiliate links.
-Do not use fabricated image URLs. If no reliable image is available for
-an article, omit its image rather than inventing a URL.
+Do not use fabricated image URLs. Omit images entirely.
 """.strip()
 
 def call_gemini(prompt: str, model: str) -> str:
@@ -265,10 +301,12 @@ def call_gemini(prompt: str, model: str) -> str:
 
 def clean_generated_html(document: str) -> str:
     """
-    Remove accidental Markdown fences and potentially unsafe elements.
+    Strip reasoning preamble, Markdown fences, embedded styles, and unsafe elements.
 
-    The prompt already asks Gemini not to include JavaScript, but this
-    provides a defensive cleanup before publishing the generated page.
+    The prompt instructs Gemini to use the site's external stylesheet and not
+    include a <style> block, but this provides a defensive cleanup before the
+    generated page is published. Removing <style> prevents the digest's CSS
+    from bleeding into the host index.html when the content is injected via JS.
     """
     document = document.strip()
 
@@ -295,15 +333,15 @@ def clean_generated_html(document: str) -> str:
     if end_matches:
         document = document[: end_matches[-1].end()]
 
-    # Remove script, iframe, object, embed, and form elements.
+    # Remove script, iframe, object, embed, form, and style elements.
     document = re.sub(
-        r"<(script|iframe|object|embed|form)\b[^>]*>.*?</\1\s*>",
+        r"<(script|style|iframe|object|embed|form)\b[^>]*>.*?</\1\s*>",
         "",
         document,
         flags=re.IGNORECASE | re.DOTALL,
     )
     document = re.sub(
-        r"<(script|iframe|object|embed|form)\b[^>]*/?>",
+        r"<(script|style|iframe|object|embed|form)\b[^>]*/?>",
         "",
         document,
         flags=re.IGNORECASE,
